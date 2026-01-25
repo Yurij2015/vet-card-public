@@ -6,8 +6,8 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'clinic',
-      component: ClinicView,
+      name: 'home',
+      redirect: '/my-clinic'
     },
     {
       path: '/appointment',
@@ -18,6 +18,11 @@ const router = createRouter({
       path: '/about',
       name: 'about',
       component: () => import('../views/AboutView.vue'),
+    },
+    {
+      path: '/:slug',
+      name: 'clinic',
+      component: ClinicView,
     },
   ],
 })
