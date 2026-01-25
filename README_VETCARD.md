@@ -84,6 +84,14 @@ src/
 - User information form
 - Appointment confirmation
 
+## Troubleshooting
+
+If you encounter any issues during development, check the [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) guide for common problems and solutions, including:
+
+- **Maximum Recursive Updates Error** - Fix infinite loops in reactive effects
+- **Component Update Issues** - Parent-child communication patterns
+- **Watch and Computed Best Practices** - Avoid common pitfalls
+
 ## Browser Support
 
 ### Recommended IDE Setup
