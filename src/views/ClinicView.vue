@@ -49,9 +49,9 @@ const callClinic = () => {
   <div class="min-h-screen bg-gray-50">
     <!-- Desktop Layout - Full Screen -->
     <div class="hidden lg:block lg:h-screen lg:w-full">
-      <div class="h-full w-full px-0 flex flex-col justify-center">
+      <div class="h-full w-full px-12 xl:px-16 2xl:px-20 flex flex-col justify-center">
         <!-- VetCard Logo -->
-        <div class="flex items-center justify-start gap-3 mb-8">
+        <div class="flex items-center justify-start gap-3 mb-10">
           <svg class="w-10 h-10 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2C9.243 2 7 4.243 7 7c0 2.197 1.437 4.069 3.432 4.735-.833.455-1.592.976-2.25 1.542C5.77 15.343 4 18.384 4 22h16c0-3.616-1.77-6.657-4.182-8.723-.658-.566-1.417-1.087-2.25-1.542C15.563 11.069 17 9.197 17 7c0-2.757-2.243-5-5-5z"/>
             <circle cx="9" cy="9" r="1"/>
@@ -77,54 +77,54 @@ const callClinic = () => {
         </div>
 
         <!-- Contact Info Row -->
-        <div class="flex items-center justify-center gap-10 xl:gap-14 mb-12">
+        <div class="flex items-center justify-center gap-12 xl:gap-16 mb-12">
           <button
             @click="callClinic"
-            class="flex items-center gap-3 xl:gap-4 hover:text-blue-600 transition-colors"
+            class="flex items-center gap-4 xl:gap-5 hover:text-blue-600 transition-colors"
           >
-            <svg class="w-6 h-6 xl:w-6 xl:h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-7 h-7 xl:w-8 xl:h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
             </svg>
-            <span class="text-lg xl:text-xl font-medium text-gray-900">{{ clinicInfo.phone }}</span>
+            <span class="text-xl xl:text-2xl font-medium text-gray-900">{{ clinicInfo.phone }}</span>
           </button>
 
           <button
             @click="openMaps"
-            class="flex items-center gap-3 xl:gap-4 hover:text-blue-600 transition-colors"
+            class="flex items-center gap-4 xl:gap-5 hover:text-blue-600 transition-colors"
           >
-            <svg class="w-6 h-6 xl:w-6 xl:h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-7 h-7 xl:w-8 xl:h-8 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
             </svg>
-            <span class="text-lg xl:text-xl font-medium text-gray-900">{{ clinicInfo.address }}</span>
+            <span class="text-xl xl:text-2xl font-medium text-gray-900">{{ clinicInfo.address }}</span>
           </button>
         </div>
 
         <!-- Three Column Layout -->
-        <div class="grid grid-cols-3 gap-16 xl:gap-20 2xl:gap-24">
+        <div class="grid grid-cols-3 gap-14 xl:gap-18 2xl:gap-20">
           <!-- Opening Hours -->
           <div>
-            <h3 class="text-2xl xl:text-2xl font-bold text-gray-900 mb-3 xl:mb-4">Opening Hours</h3>
-            <p class="text-lg xl:text-xl text-gray-700 leading-relaxed">{{ clinicInfo.hours }}</p>
+            <h3 class="text-2xl xl:text-3xl font-bold text-gray-900 mb-4">Opening Hours</h3>
+            <p class="text-xl xl:text-xl text-gray-700 leading-relaxed">{{ clinicInfo.hours }}</p>
           </div>
 
           <!-- Veterinarians -->
           <div>
-            <h3 class="text-2xl xl:text-2xl font-bold text-gray-900 mb-4 xl:mb-5">Our Veterinarians</h3>
-            <div class="space-y-4 xl:space-y-5">
+            <h3 class="text-2xl xl:text-3xl font-bold text-gray-900 mb-5">Our Veterinarians</h3>
+            <div class="space-y-5 xl:space-y-6">
               <div
                 v-for="vet in clinicInfo.veterinarians"
                 :key="vet.name"
-                class="flex items-center gap-4 xl:gap-5"
+                class="flex items-center gap-5 xl:gap-6"
               >
                 <img
                   :src="vet.image"
                   :alt="vet.name"
-                  class="w-16 h-16 xl:w-18 xl:h-18 rounded-full object-cover"
+                  class="w-20 h-20 xl:w-24 xl:h-24 rounded-full object-cover"
                 />
                 <div>
-                  <h4 class="text-lg xl:text-xl font-semibold text-gray-900">{{ vet.name }}</h4>
-                  <p class="text-base xl:text-lg text-gray-600">{{ vet.title }}</p>
+                  <h4 class="text-xl xl:text-2xl font-semibold text-gray-900">{{ vet.name }}</h4>
+                  <p class="text-lg xl:text-xl text-gray-600">{{ vet.title }}</p>
                 </div>
               </div>
             </div>
@@ -132,15 +132,15 @@ const callClinic = () => {
 
           <!-- Services -->
           <div>
-            <h3 class="text-2xl xl:text-2xl font-bold text-gray-900 mb-3 xl:mb-4">Our Services</h3>
-            <ul class="grid grid-cols-2 gap-x-4 xl:gap-x-5 gap-y-2 xl:gap-y-3">
+            <h3 class="text-2xl xl:text-3xl font-bold text-gray-900 mb-4">Our Services</h3>
+            <ul class="grid grid-cols-2 gap-x-5 xl:gap-x-6 gap-y-3 xl:gap-y-4">
               <li
                 v-for="service in clinicInfo.services"
                 :key="service"
-                class="flex items-start gap-2 xl:gap-3 text-gray-700"
+                class="flex items-start gap-3 xl:gap-4 text-gray-700"
               >
-                <span class="w-1.5 h-1.5 xl:w-2 xl:h-2 bg-gray-900 rounded-full flex-shrink-0 mt-2 xl:mt-2.5"></span>
-                <span class="text-base xl:text-lg">{{ service }}</span>
+                <span class="w-2 h-2 xl:w-2.5 xl:h-2.5 bg-gray-900 rounded-full flex-shrink-0 mt-2 xl:mt-2.5"></span>
+                <span class="text-lg xl:text-xl leading-snug">{{ service }}</span>
               </li>
             </ul>
           </div>
