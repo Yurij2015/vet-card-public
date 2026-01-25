@@ -10,11 +10,6 @@ const router = createRouter({
       redirect: '/my-clinic'
     },
     {
-      path: '/appointment',
-      name: 'appointment',
-      component: () => import('../views/AppointmentView.vue'),
-    },
-    {
       path: '/about',
       name: 'about',
       component: () => import('../views/AboutView.vue'),
@@ -23,6 +18,14 @@ const router = createRouter({
       path: '/:slug',
       name: 'clinic',
       component: ClinicView,
+      children: [
+        {
+          path: 'appointment',
+          name: 'appointment',
+          component: () => import('../views/AppointmentView.vue'),
+          props: true
+        }
+      ]
     },
   ],
 })
