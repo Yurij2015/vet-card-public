@@ -1,201 +1,32 @@
-<script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { fetchClinicBySlug, type ClinicData } from '@/services/clinicApi'
-import PetsIcon from '@/assets/icons/pets.svg?raw'
-
-const router = useRouter()
-const route = useRoute()
-
-const loading = ref(true)
-const error = ref<string | null>(null)
-
-const clinicInfo = ref<ClinicData | null>(null)
-
-// Get visible sections sorted by order
-const visibleSections = computed(() => {
-  if (!clinicInfo.value || !clinicInfo.value.sections) return []
-  return clinicInfo.value.sections
-    .filter(s => s.visible)
-    .sort((a, b) => a.order - b.order)
-})
-
-// Check if a section is visible
-const isSectionVisible = (sectionId: string) => {
-  if (!clinicInfo.value || !clinicInfo.value.sections) return false
-  const section = clinicInfo.value.sections.find(s => s.id === sectionId)
-  return section?.visible ?? false
-}
-
-// Get section title
-const getSectionTitle = (sectionId: string): string => {
-  const titles: Record<string, string> = {
-    services: 'Our Services',
-    doctors: 'Our Veterinarians',
-    openingHours: 'Opening Hours',
-    gallery: 'Photo Gallery',
-    reviews: 'Reviews'
-  }
-  return titles[sectionId] || 'Section'
-}
-
-// Format opening hours for display
-const formatOpeningHours = computed(() => {
-  const hours = clinicInfo.value?.opening_hours
-  if (!hours) return 'Mon – Fri  8:00 am – 6:00 pm'
-
-  // Check if any day has been configured
-  const hasConfiguredHours = Object.values(hours).some((day: any) => {
-    return day.closed || day.open !== '09:00' || day.close !== '18:00'
-  })
-
-  if (!hasConfiguredHours) {
-    return 'Mon – Fri  8:00 am – 6:00 pm'
-  }
-
-  // Map of day keys to short names
-  const dayNames: Record<string, string> = {
-    monday: 'Mon',
-    tuesday: 'Tue',
-    wednesday: 'Wed',
-    thursday: 'Thu',
-    friday: 'Fri',
-    saturday: 'Sat',
-    sunday: 'Sun'
-  }
-
-  // Find closed days
-  const closedDays = Object.entries(hours)
-    .filter(([, day]: [string, any]) => day.closed)
-    .map(([key]) => dayNames[key])
-    .filter(Boolean)
-
-  // Find open days with their hours
-  const openDays = Object.entries(hours)
-    .filter(([, day]: [string, any]) => !day.closed)
-
-  if (openDays.length === 0) {
-    return 'Closed'
-  }
-
-  // Use first open day's hours as representative
-  const firstDay = openDays[0]
-  if (!firstDay) return 'Mon – Fri  8:00 am – 6:00 pm'
-
-  const firstOpenDay: any = firstDay[1]
-  const hoursText = `${firstOpenDay.open} – ${firstOpenDay.close}`
-
-  // If there are closed days, show them in brackets
-  if (closedDays.length > 0) {
-    return `Mon – Sun  ${hoursText}\n(Closed: ${closedDays.join(', ')})`
-  }
-
-  return `Mon – Sun  ${hoursText}`
-})
-
-// Calculate average rating
-const calculateAverageRating = () => {
-  if (!clinicInfo.value?.reviews || clinicInfo.value.reviews.length === 0) return '4.8'
-  const sum = clinicInfo.value.reviews.reduce((acc, review) => acc + review.rating, 0)
-  const avg = sum / clinicInfo.value.reviews.length
-  return avg.toFixed(1)
-}
-
-// Computed property for services to display
-const displayServices = computed(() => {
-  if (clinicInfo.value?.services && clinicInfo.value.services.length > 0) {
-    return clinicInfo.value.services
-  }
-  // Return default services if no API data
-  return [
-    { id: 1, name: 'Wellness Exams' },
-    { id: 2, name: 'Vaccinations' },
-    { id: 3, name: 'Dental Care' },
-    { id: 4, name: 'Surgery' },
-    { id: 5, name: 'Emergency Care' },
-    { id: 6, name: 'Laboratory Services' }
-  ]
-})
-
-// Computed property for doctors to display
-const displayDoctors = computed(() => {
-  if (clinicInfo.value?.doctors && clinicInfo.value.doctors.length > 0) {
-    return clinicInfo.value.doctors
-  }
-  // Return default doctors if no API data
-  return [
-    { id: 1, name: 'Dr. Stacy Moreno', specialization: 'Veterinarian', photo_url: null },
-    { id: 2, name: 'Dr. Edward Curtis', specialization: 'Veterinarian', photo_url: null }
-  ]
-})
-
-onMounted(async () => {
-  const slug = route.params.slug as string
-
-  if (!slug) {
-    error.value = 'No clinic slug provided'
-    loading.value = false
-    return
-  }
-
-  try {
-    loading.value = true
-    error.value = null
-    clinicInfo.value = await fetchClinicBySlug(slug)
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load clinic data'
-    console.error('Error loading clinic:', err)
-  } finally {
-    loading.value = false
-  }
-})
-
-const makeAppointment = () => {
-  router.push('/appointment')
-}
-
-const openMaps = () => {
-  if (clinicInfo.value?.address) {
-    window.open(`https://maps.google.com/?q=${encodeURIComponent(clinicInfo.value.address)}`, '_blank')
-  }
-}
-
-const callClinic = () => {
-  if (clinicInfo.value?.phone) {
-    window.location.href = `tel:${clinicInfo.value.phone}`
-  }
-}
-
-const sendEmail = () => {
-  if (clinicInfo.value?.email) {
-    window.location.href = `mailto:${clinicInfo.value.email}`
-  }
-}
-</script>
 
 <template>
   <div class="min-h-screen bg-white">
-    <!-- Loading State -->
-    <div v-if="loading" class="flex items-center justify-center min-h-screen">
-      <div class="text-center">
-        <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-        <p class="mt-4 text-xl text-gray-600">Loading clinic information...</p>
-      </div>
-    </div>
+    <!-- Router view for nested routes (appointment) -->
+    <router-view v-if="clinicInfo" :clinicData="clinicInfo" />
 
-    <!-- Error State -->
-    <div v-else-if="error" class="flex items-center justify-center min-h-screen">
-      <div class="text-center max-w-md mx-auto px-6">
-        <svg class="w-20 h-20 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2">Error Loading Clinic</h2>
-        <p class="text-lg text-gray-600">{{ error }}</p>
+    <!-- Show clinic view only when not on nested route -->
+    <template v-if="!$route.name || $route.name === 'clinic'">
+      <!-- Loading State -->
+      <div v-if="loading" class="flex items-center justify-center min-h-screen">
+        <div class="text-center">
+          <div class="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
+          <p class="mt-4 text-xl text-gray-600">Loading clinic information...</p>
+        </div>
       </div>
-    </div>
 
-    <!-- Content -->
-    <div v-else-if="clinicInfo" class="bg-gray-50">
+      <!-- Error State -->
+      <div v-else-if="error" class="flex items-center justify-center min-h-screen">
+        <div class="text-center max-w-md mx-auto px-6">
+          <svg class="w-20 h-20 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <h2 class="text-2xl font-bold text-gray-900 mb-2">Error Loading Clinic</h2>
+          <p class="text-lg text-gray-600">{{ error }}</p>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div v-else-if="clinicInfo" class="bg-gray-50">
       <!-- Desktop Layout - Full Screen -->
       <div class="hidden lg:block lg:h-screen lg:w-full">
         <div class="h-full w-full px-12 xl:px-16 2xl:px-20 flex flex-col justify-center">
@@ -471,8 +302,185 @@ const sendEmail = () => {
         </div>
       </div>
     </div>
+    </template>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, onMounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { fetchClinicBySlug, type ClinicData } from '@/services/clinicApi'
+import PetsIcon from '@/assets/icons/pets.svg?raw'
+
+const router = useRouter()
+const route = useRoute()
+
+const loading = ref(true)
+const error = ref<string | null>(null)
+
+const clinicInfo = ref<ClinicData | null>(null)
+
+// Get visible sections sorted by order
+const visibleSections = computed(() => {
+  if (!clinicInfo.value || !clinicInfo.value.sections) return []
+  return clinicInfo.value.sections
+    .filter(s => s.visible)
+    .sort((a, b) => a.order - b.order)
+})
+
+// Check if a section is visible
+const isSectionVisible = (sectionId: string) => {
+  if (!clinicInfo.value || !clinicInfo.value.sections) return false
+  const section = clinicInfo.value.sections.find(s => s.id === sectionId)
+  return section?.visible ?? false
+}
+
+// Get section title
+const getSectionTitle = (sectionId: string): string => {
+  const titles: Record<string, string> = {
+    services: 'Our Services',
+    doctors: 'Our Veterinarians',
+    openingHours: 'Opening Hours',
+    gallery: 'Photo Gallery',
+    reviews: 'Reviews'
+  }
+  return titles[sectionId] || 'Section'
+}
+
+// Format opening hours for display
+const formatOpeningHours = computed(() => {
+  const hours = clinicInfo.value?.opening_hours
+  if (!hours) return 'Mon – Fri  8:00 am – 6:00 pm'
+
+  // Check if any day has been configured
+  const hasConfiguredHours = Object.values(hours).some((day: any) => {
+    return day.closed || day.open !== '09:00' || day.close !== '18:00'
+  })
+
+  if (!hasConfiguredHours) {
+    return 'Mon – Fri  8:00 am – 6:00 pm'
+  }
+
+  // Map of day keys to short names
+  const dayNames: Record<string, string> = {
+    monday: 'Mon',
+    tuesday: 'Tue',
+    wednesday: 'Wed',
+    thursday: 'Thu',
+    friday: 'Fri',
+    saturday: 'Sat',
+    sunday: 'Sun'
+  }
+
+  // Find closed days
+  const closedDays = Object.entries(hours)
+    .filter(([, day]: [string, any]) => day.closed)
+    .map(([key]) => dayNames[key])
+    .filter(Boolean)
+
+  // Find open days with their hours
+  const openDays = Object.entries(hours)
+    .filter(([, day]: [string, any]) => !day.closed)
+
+  if (openDays.length === 0) {
+    return 'Closed'
+  }
+
+  // Use first open day's hours as representative
+  const firstDay = openDays[0]
+  if (!firstDay) return 'Mon – Fri  8:00 am – 6:00 pm'
+
+  const firstOpenDay: any = firstDay[1]
+  const hoursText = `${firstOpenDay.open} – ${firstOpenDay.close}`
+
+  // If there are closed days, show them in brackets
+  if (closedDays.length > 0) {
+    return `Mon – Sun  ${hoursText}\n(Closed: ${closedDays.join(', ')})`
+  }
+
+  return `Mon – Sun  ${hoursText}`
+})
+
+// Calculate average rating
+const calculateAverageRating = () => {
+  if (!clinicInfo.value?.reviews || clinicInfo.value.reviews.length === 0) return '4.8'
+  const sum = clinicInfo.value.reviews.reduce((acc, review) => acc + review.rating, 0)
+  const avg = sum / clinicInfo.value.reviews.length
+  return avg.toFixed(1)
+}
+
+// Computed property for services to display
+const displayServices = computed(() => {
+  if (clinicInfo.value?.services && clinicInfo.value.services.length > 0) {
+    return clinicInfo.value.services
+  }
+  // Return default services if no API data
+  return [
+    { id: 1, name: 'Wellness Exams' },
+    { id: 2, name: 'Vaccinations' },
+    { id: 3, name: 'Dental Care' },
+    { id: 4, name: 'Surgery' },
+    { id: 5, name: 'Emergency Care' },
+    { id: 6, name: 'Laboratory Services' }
+  ]
+})
+
+// Computed property for doctors to display
+const displayDoctors = computed(() => {
+  if (clinicInfo.value?.doctors && clinicInfo.value.doctors.length > 0) {
+    return clinicInfo.value.doctors
+  }
+  // Return default doctors if no API data
+  return [
+    { id: 1, name: 'Dr. Stacy Moreno', specialization: 'Veterinarian', photo_url: null },
+    { id: 2, name: 'Dr. Edward Curtis', specialization: 'Veterinarian', photo_url: null }
+  ]
+})
+
+onMounted(async () => {
+  const slug = route.params.slug as string
+
+  if (!slug) {
+    error.value = 'No clinic slug provided'
+    loading.value = false
+    return
+  }
+
+  try {
+    loading.value = true
+    error.value = null
+    clinicInfo.value = await fetchClinicBySlug(slug)
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to load clinic data'
+    console.error('Error loading clinic:', err)
+  } finally {
+    loading.value = false
+  }
+})
+
+const makeAppointment = () => {
+  const slug = route.params.slug as string
+  router.push(`/${slug}/appointment`)
+}
+
+const openMaps = () => {
+  if (clinicInfo.value?.address) {
+    window.open(`https://maps.google.com/?q=${encodeURIComponent(clinicInfo.value.address)}`, '_blank')
+  }
+}
+
+const callClinic = () => {
+  if (clinicInfo.value?.phone) {
+    window.location.href = `tel:${clinicInfo.value.phone}`
+  }
+}
+
+const sendEmail = () => {
+  if (clinicInfo.value?.email) {
+    window.location.href = `mailto:${clinicInfo.value.email}`
+  }
+}
+</script>
 
 <style scoped>
 /* Additional styles if needed */
