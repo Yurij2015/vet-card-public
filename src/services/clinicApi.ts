@@ -67,7 +67,7 @@ export interface ClinicData {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 export async function fetchClinicBySlug(slug: string): Promise<ClinicData> {
-  const url = `${API_BASE_URL}/api/clinic-catalog/vet-card/${slug}`
+  const url = `${API_BASE_URL}/clinic-catalog/vet-card/${slug}`
 
   try {
     const response = await fetch(url)
