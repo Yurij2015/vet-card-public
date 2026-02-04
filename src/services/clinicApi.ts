@@ -78,9 +78,8 @@ export async function fetchClinicBySlug(slug: string): Promise<ClinicData> {
 
     const responseData = await response.json()
 
-    // Extract data from nested structure if it exists
-    const data = responseData.data || responseData
-    return data
+    // Extract data from a nested structure if it exists
+    return responseData.data || responseData
   } catch (error) {
     console.error('Error fetching clinic data:', error)
     throw error
