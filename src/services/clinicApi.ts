@@ -64,10 +64,31 @@ export interface ClinicData {
   updated_at?: string
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+// Маппінг slug → tenant_domain (генерується при build)
+import clinicMapping from '@/data/clinicMapping.json'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://vet.digispace.pro'
+const isDev = import.meta.env.DEV
+
+// Отримуємо домен тенанта за slug
+function getTenantDomain(slug: string): string {
+  // У dev режимі завжди використовуємо API_BASE_URL з .env
+  if (isDev) {
+    return API_BASE_URL
+  }
+  // У production використовуємо маппінг тенантів
+  const mapping = clinicMapping as Record<string, string>
+  return mapping[slug] || API_BASE_URL
+}
 
 export async function fetchClinicBySlug(slug: string): Promise<ClinicData> {
-  const url = `${API_BASE_URL}/clinic-catalog/vet-card/${slug}`
+  const tenantDomain = getTenantDomain(slug)
+  const baseUrl = tenantDomain.startsWith('http') ? tenantDomain : `https://${tenantDomain}`
+
+// У dev режимі через /api, у production — прямий шлях
+  const url = isDev
+    ? `${baseUrl}/api/clinic-catalog/vet-card/${slug}`
+    : `${baseUrl}/clinic-catalog/vet-card/${slug}`
 
   try {
     const response = await fetch(url)
