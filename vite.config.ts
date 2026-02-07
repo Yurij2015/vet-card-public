@@ -16,20 +16,26 @@ interface ClinicInfo {
 
 // Функція для отримання роутів з API (викликається тільки при build)
 async function getClinicRoutes(): Promise<{ routes: string[], clinics: ClinicInfo[] }> {
+  // Fallback дані, якщо API недоступне
+  const fallbackClinics: ClinicInfo[] = [
+    { slug: 'my-clinic', tenant_domain: 'https://vet.digispace.pro' }
+  ]
+  const fallbackRoutes = ['/', '/my-clinic', '/my-clinic/appointment']
+
   try {
     // Отримуємо список клінік з їх slug та доменами тенантів
     const response = await fetch(`${API_BASE_URL}/api/clinics/list`)
 
     if (!response.ok) {
-      console.error('Failed to fetch clinic list from API')
-      throw new Error(`API returned status ${response.status}`)
+      console.warn(`API returned status ${response.status}, using fallback routes`)
+      return { routes: fallbackRoutes, clinics: fallbackClinics }
     }
 
     const clinics: ClinicInfo[] = await response.json()
 
     if (clinics.length === 0) {
-      console.warn('No clinics found in API response')
-      return { routes: ['/'], clinics: [] }
+      console.warn('No clinics found in API response, using fallback routes')
+      return { routes: fallbackRoutes, clinics: fallbackClinics }
     }
 
     const routes: string[] = ['/']
@@ -42,8 +48,8 @@ async function getClinicRoutes(): Promise<{ routes: string[], clinics: ClinicInf
     console.log(`Generated ${routes.length} routes for prerendering from ${clinics.length} clinics`)
     return { routes, clinics }
   } catch (error) {
-    console.error('Error fetching clinic routes from API:', error)
-    throw error // Білд має впасти, якщо API недоступне
+    console.warn('Error fetching clinic routes from API, using fallback:', error)
+    return { routes: fallbackRoutes, clinics: fallbackClinics }
   }
 }
 
