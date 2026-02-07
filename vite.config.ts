@@ -14,16 +14,16 @@ interface ClinicInfo {
   tenant_domain: string
 }
 
-// Функція для отримання роутів з API (викликається тільки при build)
+// Function to get routes from API (called only during build)
 async function getClinicRoutes(): Promise<{ routes: string[], clinics: ClinicInfo[] }> {
-  // Fallback дані, якщо API недоступне
+  // Fallback data if API is unavailable
   const fallbackClinics: ClinicInfo[] = [
     { slug: 'my-clinic', tenant_domain: 'https://vet.digispace.pro' }
   ]
   const fallbackRoutes = ['/', '/my-clinic', '/my-clinic/appointment']
 
   try {
-    // Отримуємо список клінік з їх slug та доменами тенантів
+    // Get list of clinics with their slugs and tenant domains
     const response = await fetch(`${API_BASE_URL}/api/clinics/list`)
 
     if (!response.ok) {
@@ -53,11 +53,11 @@ async function getClinicRoutes(): Promise<{ routes: string[], clinics: ClinicInf
   }
 }
 
-// Зберігаємо маппінг slug → tenant_domain для використання в runtime
+// Save slug → tenant_domain mapping for runtime usage
 function saveClinicMapping(clinics: ClinicInfo[]) {
   const mapping: Record<string, string> = {}
   for (const clinic of clinics) {
-    // Додаємо https:// якщо домен не починається з http
+    // Add https:// if domain doesn't start with http
     mapping[clinic.slug] = clinic.tenant_domain.startsWith('http')
         ? clinic.tenant_domain
         : `https://${clinic.tenant_domain}`
@@ -81,7 +81,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 export default defineConfig(async ({ command }) => {
   const isBuild = command === 'build'
 
-  // Отримуємо роути та маппінг тільки при build
+  // Get routes and mapping only during build
   let routes: string[] = []
   if (isBuild) {
     const result = await getClinicRoutes()
@@ -92,7 +92,7 @@ export default defineConfig(async ({ command }) => {
   return {
     plugins: [
       react(),
-      // Prerender плагін додається тільки при build
+      // Prerender plugin is added only during build
       ...(isBuild ? [
         prerender({
           routes,
@@ -102,7 +102,7 @@ export default defineConfig(async ({ command }) => {
             renderAfterTime: 500,
           },
           postProcess(renderedRoute) {
-            // Додаємо мета-теги для SEO
+            // Add meta tags for SEO
             renderedRoute.html = renderedRoute.html.replace(
               /<\/head>/,
               `<meta name="prerender-status-code" content="200" /></head>`
