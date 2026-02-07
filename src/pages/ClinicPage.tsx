@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Helmet } from 'react-helmet-async'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { fetchClinicBySlug, type ClinicData } from '@/services/clinicApi'
 import PetsIcon from '@/components/PetsIcon'
 
@@ -24,6 +24,19 @@ export default function ClinicPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [clinicInfo, setClinicInfo] = useState<ClinicData | null>(null)
+
+  // Set document meta tags for SEO - must be called before any conditional returns
+  useDocumentMeta({
+    title: clinicInfo ? `${clinicInfo.clinic_name} | VetCard` : 'VetCard',
+    description: clinicInfo?.tagline || (clinicInfo ? `${clinicInfo.clinic_name} - Veterinary Clinic` : 'Veterinary Clinic'),
+    ogTitle: clinicInfo ? `${clinicInfo.clinic_name} | VetCard` : 'VetCard',
+    ogDescription: clinicInfo?.tagline || (clinicInfo ? `${clinicInfo.clinic_name} - Veterinary Clinic` : 'Veterinary Clinic'),
+    ogType: 'website',
+    ogImage: clinicInfo?.logo_url || undefined,
+    twitterCard: 'summary_large_image',
+    twitterTitle: clinicInfo ? `${clinicInfo.clinic_name} | VetCard` : 'VetCard',
+    twitterDescription: clinicInfo?.tagline || (clinicInfo ? `${clinicInfo.clinic_name} - Veterinary Clinic` : 'Veterinary Clinic'),
+  })
 
   useEffect(() => {
     async function loadClinic() {
@@ -186,19 +199,9 @@ export default function ClinicPage() {
 
   const themeColor = clinicInfo.color || '#2563eb'
 
+
   return (
     <div className="min-h-screen bg-white">
-      <Helmet>
-        <title>{clinicInfo.clinic_name} | VetCard</title>
-        <meta name="description" content={clinicInfo.tagline || `${clinicInfo.clinic_name} - Veterinary Clinic`} />
-        <meta property="og:title" content={`${clinicInfo.clinic_name} | VetCard`} />
-        <meta property="og:description" content={clinicInfo.tagline || `${clinicInfo.clinic_name} - Veterinary Clinic`} />
-        <meta property="og:type" content="website" />
-        {clinicInfo.logo_url && <meta property="og:image" content={clinicInfo.logo_url} />}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${clinicInfo.clinic_name} | VetCard`} />
-        <meta name="twitter:description" content={clinicInfo.tagline || `${clinicInfo.clinic_name} - Veterinary Clinic`} />
-      </Helmet>
       <div className="bg-gray-50">
         {/* Desktop Layout */}
         <div className="hidden lg:block lg:h-screen lg:w-full overflow-auto">
