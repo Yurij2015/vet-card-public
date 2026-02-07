@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Helmet } from 'react-helmet-async'
+import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { fetchClinicBySlug, type ClinicData } from '@/services/clinicApi'
 import PetsIcon from '@/components/PetsIcon'
 
@@ -52,6 +52,16 @@ export default function AppointmentPage() {
   }, [slug])
 
   const themeColor = clinicData?.color || '#2563eb'
+
+  // Set document meta tags for SEO - must be called before any conditional returns
+  useDocumentMeta({
+    title: `Book Appointment | ${clinicData?.clinic_name || 'VetCard'}`,
+    description: `Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`,
+    ogTitle: `Book Appointment | ${clinicData?.clinic_name || 'VetCard'}`,
+    ogDescription: `Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`,
+    ogType: 'website',
+    robots: 'noindex',
+  })
 
   const monthName = useMemo(() => {
     return currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
@@ -141,16 +151,9 @@ export default function AppointmentPage() {
     )
   }
 
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Helmet>
-        <title>Book Appointment | {clinicData?.clinic_name || 'VetCard'}</title>
-        <meta name="description" content={`Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`} />
-        <meta property="og:title" content={`Book Appointment | ${clinicData?.clinic_name || 'VetCard'}`} />
-        <meta property="og:description" content={`Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`} />
-        <meta property="og:type" content="website" />
-        <meta name="robots" content="noindex" />
-      </Helmet>
       {/* Desktop Layout */}
       <div className="hidden lg:flex lg:min-h-screen lg:w-full lg:flex-col lg:items-center lg:justify-center px-12 xl:px-16 2xl:px-20 py-8">
         <div className="w-full max-w-5xl">
