@@ -47,6 +47,26 @@ export interface SeoData {
   og_image: string | null
 }
 
+export interface TenantDomain {
+  id: number
+  domain: string
+  tenant_id: string
+}
+
+export interface Tenant {
+  id: string
+  name: string
+  domains: TenantDomain[]
+}
+
+export interface Branch {
+  id: number
+  name: string
+  address?: string
+  phone?: string
+  email?: string
+}
+
 export interface ClinicData {
   id: number
   tenant_id: string
@@ -68,6 +88,8 @@ export interface ClinicData {
   services?: Service[]
   doctors?: Doctor[]
   seo?: SeoData
+  tenant?: Tenant
+  branches?: Branch[]
   created_at?: string
   updated_at?: string
 }
@@ -139,6 +161,64 @@ export async function fetchClinicsList(): Promise<ClinicListItem[]> {
     return data.data || data
   } catch (error) {
     console.error('Error fetching clinics list:', error)
+    throw error
+  }
+}
+
+// Appointment data for booking
+export interface AppointmentData {
+  owner_name: string
+  pet_name: string
+  animal_type: string
+  phone: string
+  email?: string
+  service_reason?: string
+  pet_age?: string
+  appointment_at: string
+  status: 'draft' | 'pending' | 'confirmed'
+  branch_id?: number
+}
+
+// Get tenant domain from clinic data
+function getTenantDomainFromClinic(clinicData: ClinicData): string {
+  // Try to get domain from tenant.domains array
+  if (clinicData.tenant?.domains && clinicData.tenant.domains.length > 0) {
+    const domain = clinicData.tenant.domains[0].domain
+    // Add protocol if missing
+    if (domain.includes('localhost')) {
+      return `http://${domain}`
+    }
+    return domain.startsWith('http') ? domain : `https://${domain}`
+  }
+
+  // Fallback to slug-based lookup
+  return getTenantDomain(clinicData.slug)
+}
+
+// Create appointment at clinic
+export async function createAppointment(clinicData: ClinicData, data: AppointmentData): Promise<{ success: boolean; message?: string }> {
+  const tenantDomain = getTenantDomainFromClinic(clinicData)
+  const baseUrl = tenantDomain.startsWith('http') ? tenantDomain : `https://${tenantDomain}`
+  const url = `${baseUrl}/api/public/appointments`
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(data),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || `Failed to create appointment: ${response.status}`)
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error creating appointment:', error)
     throw error
   }
 }
