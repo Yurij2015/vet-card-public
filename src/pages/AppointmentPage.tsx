@@ -156,111 +156,114 @@ export default function AppointmentPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Desktop Layout */}
-      <div className="hidden lg:flex lg:min-h-screen lg:w-full lg:flex-col lg:items-center lg:justify-center px-12 xl:px-16 2xl:px-20 py-8">
-        <div className="w-full max-w-5xl">
-          {/* VetCard Logo */}
-          <div className="flex items-center justify-start gap-3 mb-8">
-            <PetsIcon color={themeColor} className="h-8 w-8" />
-            <h1 className="text-3xl font-bold text-gray-900">VetCard</h1>
+      <div className="hidden lg:block">
+        {/* Header */}
+        <header className="bg-white shadow-sm">
+          <div className="max-w-6xl mx-auto px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <PetsIcon color={themeColor} className="h-8 w-8" />
+                <span className="text-2xl font-bold text-gray-900">VetCard</span>
+              </div>
+              <button
+                onClick={goBack}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                <span className="font-medium">Back to Clinic</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="max-w-6xl mx-auto px-8 py-12">
+          {/* Page Title */}
+          <div className="text-center mb-12">
+            <h1 className="text-4xl xl:text-5xl font-bold text-gray-900 mb-3">
+              Make an Appointment
+            </h1>
+            {clinicData && (
+              <p className="text-xl text-gray-600">
+                {clinicData.clinic_name}
+              </p>
+            )}
           </div>
 
-          {/* Back Button & Title */}
-          <div className="flex items-center gap-4 mb-8">
-            <button onClick={goBack} className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-              <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
-              </svg>
-            </button>
-            <h2 className="text-4xl xl:text-5xl font-bold text-gray-900">Make an Appointment</h2>
-          </div>
+          {/* Two Column Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Left Column: Calendar */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
+                  </svg>
+                </button>
+                <h3 className="text-2xl font-bold text-gray-900">{monthName}</h3>
+                <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </button>
+              </div>
 
-          {/* Grid Content */}
-          <div className="grid lg:grid-cols-2 gap-12 xl:gap-16">
-            {/* Left Column: Calendar & Time */}
-            <div className="space-y-8">
-              {/* Calendar */}
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                    <svg className="w-5 h-5 xl:w-6 xl:h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
-                    </svg>
-                  </button>
-                  <h3 className="text-2xl xl:text-3xl font-bold text-gray-900">{monthName}</h3>
-                  <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                    <svg className="w-5 h-5 xl:w-6 xl:h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="bg-white rounded-2xl p-6 xl:p-8 shadow-sm">
-                  {/* Weekday Headers */}
-                  <div className="grid grid-cols-7 gap-2 mb-4">
-                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
-                      <div key={index} className="text-center text-sm xl:text-base font-semibold text-gray-600">
-                        {day}
-                      </div>
-                    ))}
+              {/* Weekday Headers */}
+              <div className="grid grid-cols-7 gap-2 mb-4">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                  <div key={index} className="text-center text-sm font-semibold text-gray-600">
+                    {day}
                   </div>
+                ))}
+              </div>
 
-                  {/* Calendar Days */}
-                  <div className="grid grid-cols-7 gap-2">
-                    {calendarDays.map((date, index) => (
-                      <button
-                        key={index}
-                        onClick={() => selectDate(date)}
-                        disabled={!date}
-                        className={`aspect-square flex items-center justify-center text-lg xl:text-xl rounded-full transition-all ${
-                          !date ? 'invisible' : ''
-                        } ${
-                          date && !isDateSelected(date) && !isToday(date) ? 'text-gray-900 hover:bg-gray-100' : ''
-                        } ${
-                          date && (isToday(date) || isDateSelected(date)) ? 'font-semibold' : ''
-                        }`}
-                        style={date && (isToday(date) || isDateSelected(date)) ? {
-                          backgroundColor: themeColor,
-                          color: 'white',
-                          boxShadow: isDateSelected(date) ? `0 0 0 4px ${themeColor}33` : 'none'
-                        } : {}}
-                      >
-                        {date ? date.getDate() : ''}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              {/* Calendar Days */}
+              <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map((date, index) => (
+                  <button
+                    key={index}
+                    onClick={() => selectDate(date)}
+                    disabled={!date}
+                    className={`aspect-square flex items-center justify-center text-lg rounded-full transition-all ${
+                      !date ? 'invisible' : ''
+                    } ${
+                      date && !isDateSelected(date) && !isToday(date) ? 'text-gray-900 hover:bg-gray-100' : ''
+                    } ${
+                      date && (isToday(date) || isDateSelected(date)) ? 'font-semibold' : ''
+                    }`}
+                    style={date && (isToday(date) || isDateSelected(date)) ? {
+                      backgroundColor: themeColor,
+                      color: 'white',
+                      boxShadow: isDateSelected(date) ? `0 0 0 4px ${themeColor}33` : 'none'
+                    } : {}}
+                  >
+                    {date ? date.getDate() : ''}
+                  </button>
+                ))}
               </div>
 
               {/* Time Slots */}
-              <div>
-                <h3 className="text-2xl xl:text-3xl font-bold text-gray-900 mb-4">Select a Time</h3>
-                <div className="grid grid-cols-2 gap-3 xl:gap-4">
+              <div className="mt-8">
+                <h4 className="text-xl font-bold text-gray-900 mb-4">Select a Time</h4>
+                <div className="grid grid-cols-4 gap-3">
                   {timeSlots.map((slot) => (
                     <button
                       key={slot.time}
                       onClick={() => setSelectedTime(slot.time)}
                       disabled={!slot.available}
-                      className={`py-4 px-6 rounded-xl font-semibold text-lg xl:text-xl transition-all ${
+                      className={`py-3 px-4 rounded-xl font-medium text-base transition-all ${
                         selectedTime === slot.time && slot.available ? 'shadow-md' : ''
                       } ${
-                        selectedTime !== slot.time && slot.available ? 'bg-white text-gray-900 border-2 border-gray-200' : ''
+                        selectedTime !== slot.time && slot.available ? 'bg-gray-100 text-gray-900 hover:bg-gray-200' : ''
                       } ${
-                        !slot.available ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+                        !slot.available ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''
                       }`}
                       style={selectedTime === slot.time && slot.available ? {
                         backgroundColor: themeColor,
                         color: 'white'
                       } : {}}
-                      onMouseEnter={(e) => {
-                        if (slot.available && selectedTime !== slot.time) {
-                          (e.currentTarget as HTMLElement).style.borderColor = themeColor
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (slot.available && selectedTime !== slot.time) {
-                          (e.currentTarget as HTMLElement).style.borderColor = ''
-                        }
-                      }}
                     >
                       {slot.time}
                     </button>
@@ -269,43 +272,76 @@ export default function AppointmentPage() {
               </div>
             </div>
 
-            {/* Right Column: User Info & Confirm */}
+            {/* Right Column: Form */}
             <div className="space-y-8">
-              <div>
-                <h3 className="text-2xl xl:text-3xl font-bold text-gray-900 mb-4">Your Information</h3>
+              <div className="bg-white rounded-2xl p-8 shadow-sm">
+                <h3 className="text-xl font-bold text-gray-900 mb-6">Your Information</h3>
                 <div className="space-y-4">
-                  <input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    type="text"
-                    placeholder="Full Name"
-                    className="w-full px-6 py-4 text-lg xl:text-xl border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
-                    onFocus={(e) => e.target.style.borderColor = themeColor}
-                    onBlur={(e) => e.target.style.borderColor = ''}
-                  />
-                  <input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    type="tel"
-                    placeholder="Phone Number"
-                    className="w-full px-6 py-4 text-lg xl:text-xl border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
-                    onFocus={(e) => e.target.style.borderColor = themeColor}
-                    onBlur={(e) => e.target.style.borderColor = ''}
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      type="text"
+                      placeholder="Enter your name"
+                      className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
+                      style={{ borderColor: name ? themeColor : '' }}
+                      onFocus={(e) => e.target.style.borderColor = themeColor}
+                      onBlur={(e) => { if (!name) e.target.style.borderColor = '' }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      type="tel"
+                      placeholder="Enter your phone"
+                      className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
+                      style={{ borderColor: phone ? themeColor : '' }}
+                      onFocus={(e) => e.target.style.borderColor = themeColor}
+                      onBlur={(e) => { if (!phone) e.target.style.borderColor = '' }}
+                    />
+                  </div>
                 </div>
               </div>
+
+              {/* Summary */}
+              {(selectedDate || selectedTime) && (
+                <div className="bg-white rounded-2xl p-8 shadow-sm">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">Appointment Summary</h3>
+                  <div className="space-y-2 text-gray-700">
+                    {selectedDate && (
+                      <p><span className="font-medium">Date:</span> {selectedDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                    )}
+                    {selectedTime && (
+                      <p><span className="font-medium">Time:</span> {selectedTime}</p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Confirm Button */}
               <button
                 onClick={confirmAppointment}
-                className="w-full text-white font-semibold text-xl xl:text-2xl py-5 px-8 rounded-2xl shadow-lg transition-all hover:opacity-90"
+                className="w-full text-white font-semibold text-xl py-4 px-8 rounded-xl shadow-md transition-all hover:opacity-90"
                 style={{ backgroundColor: themeColor }}
               >
                 Confirm Appointment
               </button>
             </div>
           </div>
-        </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="bg-white border-t border-gray-200 mt-12">
+          <div className="max-w-6xl mx-auto px-8 py-6">
+            <div className="flex items-center justify-center gap-3 text-gray-500">
+              <PetsIcon color="#9ca3af" className="h-5 w-5" />
+              <span className="text-sm">© 2026 VetCard. All rights reserved.</span>
+            </div>
+          </div>
+        </footer>
       </div>
 
       {/* Mobile Layout */}
