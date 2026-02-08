@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { fetchClinicBySlug, createAppointment, type ClinicData } from '@/services/clinicApi'
 import { saveAppointment } from '@/services/appointmentStorage'
+import { getUserProfile, saveUserProfile } from '@/services/userStorage'
 import PetsIcon from '@/components/PetsIcon'
 
 interface TimeSlot {
@@ -50,6 +51,16 @@ export default function AppointmentPage() {
 
   const now = new Date()
   const [currentMonth, setCurrentMonth] = useState(new Date(now.getFullYear(), now.getMonth(), 1))
+
+  // Load saved user profile on mount
+  useEffect(() => {
+    const savedProfile = getUserProfile()
+    if (savedProfile) {
+      setOwnerName(savedProfile.owner_name)
+      setPhone(savedProfile.phone)
+      setEmail(savedProfile.email)
+    }
+  }, [])
 
   useEffect(() => {
     async function loadClinic() {
@@ -183,6 +194,13 @@ export default function AppointmentPage() {
 
       // Call the API to create the appointment using clinicData for tenant domain
       await createAppointment(clinicData, appointmentData)
+
+      // Save user profile for future appointments
+      saveUserProfile({
+        owner_name: ownerName,
+        phone: phone,
+        email: email,
+      })
 
       // Save appointment to localStorage for user's reference
       const selectedBranch = clinicData.branches?.find(b => b.id === branchId)
