@@ -1,0 +1,48 @@
+{
+  "catalog": {
+    "title": "Veterinary Clinics Catalog",
+    "subtitle": "Find the best veterinary clinic for your pet",
+    "loading": "Loading clinics...",
+    "errorTitle": "Loading Error",
+    "noClinics": "No clinics found",
+    "viewClinic": "View clinic",
+    "copyright": "© 2026 VetCard. All rights reserved."
+  },
+  "clinic": {
+    "aboutUs": "About Us",
+    "services": "Our Services",
+    "doctors": "Our Veterinarians",
+    "openingHours": "Opening Hours",
+    "gallery": "Photo Gallery",
+    "reviews": "Reviews",
+    "contact": "Contact",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "bookAppointment": "Book Appointment",
+    "closed": "Closed",
+    "rating": "Rating"
+  },
+  "appointment": {
+    "title": "Book Appointment",
+    "selectDate": "Select date",
+    "selectTime": "Select time",
+    "yourName": "Your name",
+    "yourPhone": "Your phone",
+    "submit": "Book",
+    "success": "Successfully booked!",
+    "error": "Booking error",
+    "back": "Back"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Try again"
+  },
+  "seo": {
+    "catalogTitle": "Veterinary Clinics Catalog | VetCard",
+    "catalogDescription": "Find the best veterinary clinic for your pet. Catalog of vet clinics with contacts, services, and online booking.",
+    "catalogKeywords": "veterinary clinic, vet clinic, veterinarian, clinic catalog, veterinary services"
+  }
+}
+
