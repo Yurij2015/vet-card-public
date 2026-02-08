@@ -40,6 +40,13 @@ export interface Review {
   date?: string
 }
 
+export interface SeoData {
+  title: string
+  description: string
+  keywords: string[]
+  og_image: string | null
+}
+
 export interface ClinicData {
   id: number
   tenant_id: string
@@ -60,6 +67,7 @@ export interface ClinicData {
   reviews?: Review[]
   services?: Service[]
   doctors?: Doctor[]
+  seo?: SeoData
   created_at?: string
   updated_at?: string
 }
@@ -69,6 +77,18 @@ import clinicMapping from '@/data/clinicMapping.json'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://vet.digispace.pro'
 const isDev = import.meta.env.DEV
+
+// Clinic list item with catalog data from /api/clinics/list
+export interface ClinicListItem {
+  slug: string
+  tenant_domain: string
+  clinic_name: string
+  tagline: string
+  address: string
+  phone: string
+  logo_url: string | null
+  color: string
+}
 
 // Get tenant domain by slug
 function getTenantDomain(slug: string): string {
@@ -103,3 +123,23 @@ export async function fetchClinicBySlug(slug: string): Promise<ClinicData> {
     throw error
   }
 }
+
+// Fetch list of all clinics for catalog
+export async function fetchClinicsList(): Promise<ClinicListItem[]> {
+  const url = `${API_BASE_URL}/api/clinics/list`
+
+  try {
+    const response = await fetch(url)
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch clinics list: ${response.status} ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    return data.data || data
+  } catch (error) {
+    console.error('Error fetching clinics list:', error)
+    throw error
+  }
+}
+
