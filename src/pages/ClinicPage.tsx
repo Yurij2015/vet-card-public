@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { fetchClinicBySlug, type ClinicData } from '@/services/clinicApi'
 import PetsIcon from '@/components/PetsIcon'
@@ -213,19 +213,30 @@ export default function ClinicPage() {
         <header className="bg-white shadow-sm">
           <div className="max-w-6xl mx-auto px-8 py-6">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <Link to="/" className="flex items-center gap-3">
                 <PetsIcon color={themeColor} className="h-8 w-8" />
                 <span className="text-2xl font-bold text-gray-900">VetCard</span>
-              </div>
-              {clinicInfo.enable_appointment_button && (
-                <button
-                  onClick={makeAppointment}
-                  className="hover:opacity-90 text-white font-semibold py-3 px-8 rounded-xl shadow-md transition-all"
-                  style={{ backgroundColor: themeColor }}
+              </Link>
+              <div className="flex items-center gap-4">
+                <Link
+                  to="/my-appointments"
+                  className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="My Appointments"
                 >
-                  Make an Appointment
-                </button>
-              )}
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </Link>
+                {clinicInfo.enable_appointment_button && (
+                  <button
+                    onClick={makeAppointment}
+                    className="hover:opacity-90 text-white font-semibold py-3 px-8 rounded-xl shadow-md transition-all"
+                    style={{ backgroundColor: themeColor }}
+                  >
+                    Make an Appointment
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </header>
@@ -379,13 +390,25 @@ export default function ClinicPage() {
       {/* Mobile Layout */}
       <div className="lg:hidden bg-white">
         {/* VetCard Header */}
-        <div className="bg-white px-6 py-6 text-center">
-          <div className="mb-4 flex items-center justify-center gap-2">
-            <PetsIcon color={themeColor} className="h-8 w-8" />
-            <span className="text-base font-bold text-gray-800">VetCard</span>
+        <div className="bg-white px-6 py-6">
+          <div className="flex items-center justify-between mb-4">
+            <Link to="/" className="flex items-center gap-2">
+              <PetsIcon color={themeColor} className="h-8 w-8" />
+              <span className="text-base font-bold text-gray-800">VetCard</span>
+            </Link>
+            <Link
+              to="/my-appointments"
+              className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+            </Link>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">{clinicInfo.clinic_name}</h1>
-          <p className="mt-2 text-sm text-gray-600">{clinicInfo.tagline}</p>
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900">{clinicInfo.clinic_name}</h1>
+            <p className="mt-2 text-sm text-gray-600">{clinicInfo.tagline}</p>
+          </div>
         </div>
 
         {/* Appointment Button */}
