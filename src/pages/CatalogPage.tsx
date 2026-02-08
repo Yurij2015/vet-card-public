@@ -1,20 +1,23 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useDocumentMeta } from '@/hooks/useDocumentMeta'
 import { fetchClinicsList, type ClinicListItem } from '@/services/clinicApi'
 import PetsIcon from '@/components/PetsIcon'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 export default function CatalogPage() {
+  const { t } = useTranslation()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [clinics, setClinics] = useState<ClinicListItem[]>([])
 
   useDocumentMeta({
-    title: 'Каталог ветеринарних клінік | VetCard',
-    description: 'Знайдіть найкращу ветеринарну клініку для вашого улюбленця. Каталог ветклінік з контактами, послугами та можливістю онлайн запису.',
-    keywords: 'ветеринарна клініка, ветклініка, ветеринар, каталог клінік, ветеринарні послуги',
-    ogTitle: 'Каталог ветеринарних клінік | VetCard',
-    ogDescription: 'Знайдіть найкращу ветеринарну клініку для вашого улюбленця.',
+    title: t('seo.catalogTitle'),
+    description: t('seo.catalogDescription'),
+    keywords: t('seo.catalogKeywords'),
+    ogTitle: t('seo.catalogTitle'),
+    ogDescription: t('catalog.subtitle'),
     ogType: 'website',
   })
 
@@ -44,7 +47,7 @@ export default function CatalogPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-          <p className="mt-4 text-xl text-gray-600">Завантаження клінік...</p>
+          <p className="mt-4 text-xl text-gray-600">{t('catalog.loading')}</p>
         </div>
       </div>
     )
@@ -58,7 +61,7 @@ export default function CatalogPage() {
           <svg className="w-20 h-20 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Помилка завантаження</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('catalog.errorTitle')}</h2>
           <p className="text-lg text-gray-600">{error}</p>
         </div>
       </div>
@@ -70,9 +73,12 @@ export default function CatalogPage() {
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-3">
-            <PetsIcon color="#2563eb" className="h-10 w-10" />
-            <h1 className="text-3xl font-bold text-gray-900">VetCard</h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <PetsIcon color="#2563eb" className="h-10 w-10" />
+              <h1 className="text-3xl font-bold text-gray-900">VetCard</h1>
+            </div>
+            <LanguageSwitcher />
           </div>
         </div>
       </header>
@@ -80,9 +86,9 @@ export default function CatalogPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Каталог ветеринарних клінік</h2>
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">{t('catalog.title')}</h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Знайдіть найкращу ветеринарну клініку для вашого улюбленця
+            {t('catalog.subtitle')}
           </p>
         </div>
 
@@ -91,7 +97,7 @@ export default function CatalogPage() {
             <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
             </svg>
-            <p className="text-xl text-gray-600">Клініки не знайдено</p>
+            <p className="text-xl text-gray-600">{t('catalog.noClinics')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -158,7 +164,7 @@ export default function CatalogPage() {
                       className="inline-flex items-center gap-2 text-sm font-semibold transition-colors"
                       style={{ color: clinic.color }}
                     >
-                      Переглянути клініку
+                      {t('catalog.viewClinic')}
                       <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
                       </svg>
@@ -176,7 +182,7 @@ export default function CatalogPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center justify-center gap-3 text-gray-600">
             <PetsIcon color="#9ca3af" className="h-6 w-6" />
-            <span>© 2026 VetCard. Всі права захищено.</span>
+            <span>{t('catalog.copyright')}</span>
           </div>
         </div>
       </footer>
