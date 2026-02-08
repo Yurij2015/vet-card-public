@@ -6,7 +6,8 @@
     "errorTitle": "Loading Error",
     "noClinics": "No clinics found",
     "viewClinic": "View clinic",
-    "copyright": "© 2026 VetCard. All rights reserved."
+    "copyright": "© 2026 VetCard. All rights reserved.",
+    "myAppointments": "My Appointments"
   },
   "clinic": {
     "aboutUs": "About Us",
@@ -33,6 +34,23 @@
     "success": "Successfully booked!",
     "error": "Booking error",
     "back": "Back"
+  },
+  "myAppointments": {
+    "title": "My Appointments",
+    "subtitle": "View and manage your scheduled veterinary appointments",
+    "all": "All",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "noAppointments": "No appointments found",
+    "noUpcoming": "No upcoming appointments",
+    "noPast": "No past appointments",
+    "noAppointmentsYet": "You haven't made any appointments yet",
+    "browseClinics": "Browse Clinics",
+    "viewClinic": "View Clinic",
+    "remove": "Remove",
+    "removeConfirm": "Are you sure you want to remove this appointment?",
+    "reason": "Reason",
+    "backToCatalog": "Back to Catalog"
   },
   "common": {
     "loading": "Loading...",
