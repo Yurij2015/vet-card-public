@@ -1,16 +1,34 @@
-# VetCard Public - Veterinary Clinic Appointment System
+# VetCard Public - Veterinary Clinic Catalog & Appointment System
 
-A modern, mobile-first web application for veterinary clinic appointments and information display. The application provides an interactive platform for clinics to showcase their services, veterinarians, and allow clients to book appointments online.
+A modern, mobile-first web application for veterinary clinic catalog, appointments, and information display. The application provides an interactive platform for clinics to showcase their services, veterinarians, and allow clients to book appointments online.
 
 ## 🌟 Features
 
-- 📅 **Interactive Appointment Booking** - Easy-to-use calendar interface for scheduling appointments
-- 🏥 **Clinic Information Display** - Showcase clinic details, services, and opening hours
-- 👨‍⚕️ **Veterinarians Showcase** - Display veterinarian profiles with photos and specializations
-- 📱 **Mobile-Responsive Design** - Optimized for all device sizes
+### Clinic Catalog
+- 🏥 **Clinic Catalog** - Browse all available veterinary clinics
+- 🔍 **Clinic Details** - View clinic information, services, doctors, opening hours
 - 🎨 **Customizable Branding** - Dynamic theming based on clinic branding colors
+
+### Appointment Booking
+- 📅 **Interactive Calendar** - Easy-to-use calendar interface for scheduling
+- ⏰ **Time Slot Selection** - Choose available time slots
+- 🏢 **Branch Selection** - Select branch if clinic has multiple locations
+- ✅ **Form Validation** - Complete form with all required fields
+
+### User Experience
+- 📱 **Mobile-Responsive Design** - Optimized for all device sizes (mobile-first)
+- 💾 **Local Storage** - Save appointments and user profile for quick access
+- 📋 **My Appointments** - View, filter (upcoming/past), and manage saved appointments
+- 👤 **Auto-fill Forms** - Remember user data (name, phone, email) for future bookings
+
+### Internationalization
+- 🌐 **Multi-language Support** - Ukrainian (default) and English
+- 🔄 **Language Switcher** - Easy language switching in catalog
+
+### Technical
 - 🔗 **API-Driven** - Fetches clinic data dynamically from a backend API
 - 🌐 **Multi-Clinic Support** - Single application serving multiple clinics via slug routing
+- 🚀 **SEO Ready** - Meta tags, Open Graph support
 
 ## 🛠️ Tech Stack
 
@@ -19,6 +37,7 @@ A modern, mobile-first web application for veterinary clinic appointments and in
 - **Vite** - Next-generation frontend build tool for fast development
 - **Tailwind CSS** - Utility-first CSS framework for rapid UI development
 - **React Router** - Client-side routing for single-page application
+- **i18next** - Internationalization framework
 - **Vitest** - Fast unit testing framework
 
 ## 📋 Prerequisites
@@ -76,15 +95,31 @@ npm run preview
 
 ```
 src/
-├── assets/           # Static assets and global styles
-├── components/       # Reusable React components
-├── pages/           # Page components
-│   ├── ClinicPage.tsx          # Main clinic information page
-│   └── AppointmentPage.tsx     # Appointment booking page
-├── services/        # API service layer
-│   └── clinicApi.ts            # Clinic API client
-├── App.tsx          # Main application component with routing
-└── main.tsx         # Application entry point
+├── assets/              # Static assets and global styles
+│   └── icons/           # SVG icons
+├── components/          # Reusable React components
+│   ├── PetsIcon.tsx     # Pet icon component
+│   └── LanguageSwitcher.tsx  # Language switcher component
+├── data/                # Static data files
+│   └── clinicMapping.json    # Clinic slug to tenant domain mapping
+├── hooks/               # Custom React hooks
+│   └── useDocumentMeta.ts    # SEO meta tags hook
+├── i18n/                # Internationalization
+│   ├── index.ts         # i18n configuration
+│   └── locales/         # Translation files
+│       ├── uk.json      # Ukrainian translations
+│       └── en.json      # English translations
+├── pages/               # Page components
+│   ├── CatalogPage.tsx        # Clinic catalog (home page)
+│   ├── ClinicPage.tsx         # Clinic information page
+│   ├── AppointmentPage.tsx    # Appointment booking page
+│   └── MyAppointmentsPage.tsx # User's saved appointments
+├── services/            # API and storage services
+│   ├── clinicApi.ts           # Clinic API client
+│   ├── appointmentStorage.ts  # Appointment localStorage service
+│   └── userStorage.ts         # User profile localStorage service
+├── App.tsx              # Main application component with routing
+└── main.tsx             # Application entry point
 ```
 
 ## 🔧 Available Scripts
@@ -99,7 +134,8 @@ src/
 
 The application uses dynamic routing to support multiple clinics:
 
-- `/` - Redirects to `/my-clinic` (default clinic)
+- `/` - Clinic catalog (home page)
+- `/my-appointments` - User's saved appointments
 - `/:slug` - Displays the clinic page for the given slug (e.g., `/my-clinic`)
 - `/:slug/appointment` - Appointment booking page for the specified clinic
 
@@ -107,10 +143,22 @@ The application uses dynamic routing to support multiple clinics:
 
 The application fetches clinic data from a backend API. For detailed API configuration and expected response format, see [API_SETUP.md](API_SETUP.md).
 
-**API Endpoint:**
+**API Endpoints:**
 ```
-GET {VITE_API_BASE_URL}/api/clinic-catalog/vet-card/{slug}
+GET {VITE_API_BASE_URL}/api/clinics/list                    # Get all clinics for catalog
+GET {VITE_API_BASE_URL}/api/clinic-catalog/vet-card/{slug}  # Get clinic details by slug
+POST {tenant_domain}/api/public/appointments                 # Create appointment (tenant-specific)
 ```
+
+## 💾 Local Storage
+
+The application uses localStorage for improved user experience:
+
+| Key | Description |
+|-----|-------------|
+| `vetcard_appointments` | Saved appointments (up to 50) |
+| `vetcard_user_profile` | User profile (name, phone, email) |
+| `i18nextLng` | Selected language preference |
 
 ## 💻 Recommended IDE Setup
 
