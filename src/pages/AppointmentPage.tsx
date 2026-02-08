@@ -53,13 +53,14 @@ export default function AppointmentPage() {
 
   const themeColor = clinicData?.color || '#2563eb'
 
-  // Set document meta tags for SEO - must be called before any conditional returns
+  // Set document meta tags for SEO - appointment page should not be indexed
   useDocumentMeta({
     title: `Book Appointment | ${clinicData?.clinic_name || 'VetCard'}`,
     description: `Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`,
     ogTitle: `Book Appointment | ${clinicData?.clinic_name || 'VetCard'}`,
     ogDescription: `Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`,
     ogType: 'website',
+    ogImage: clinicData?.seo?.og_image || clinicData?.logo_url || undefined,
     robots: 'noindex',
   })
 

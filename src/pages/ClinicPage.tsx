@@ -25,17 +25,22 @@ export default function ClinicPage() {
   const [error, setError] = useState<string | null>(null)
   const [clinicInfo, setClinicInfo] = useState<ClinicData | null>(null)
 
-  // Set document meta tags for SEO - must be called before any conditional returns
+  // Set document meta tags for SEO - use API SEO data if available
+  const seoTitle = clinicInfo?.seo?.title || (clinicInfo ? `${clinicInfo.clinic_name} | VetCard` : 'VetCard')
+  const seoDescription = clinicInfo?.seo?.description || clinicInfo?.tagline || (clinicInfo ? `${clinicInfo.clinic_name} - Veterinary Clinic` : 'Veterinary Clinic')
+  const seoImage = clinicInfo?.seo?.og_image || clinicInfo?.logo_url || undefined
+
   useDocumentMeta({
-    title: clinicInfo ? `${clinicInfo.clinic_name} | VetCard` : 'VetCard',
-    description: clinicInfo?.tagline || (clinicInfo ? `${clinicInfo.clinic_name} - Veterinary Clinic` : 'Veterinary Clinic'),
-    ogTitle: clinicInfo ? `${clinicInfo.clinic_name} | VetCard` : 'VetCard',
-    ogDescription: clinicInfo?.tagline || (clinicInfo ? `${clinicInfo.clinic_name} - Veterinary Clinic` : 'Veterinary Clinic'),
+    title: seoTitle,
+    description: seoDescription,
+    keywords: clinicInfo?.seo?.keywords?.join(', '),
+    ogTitle: seoTitle,
+    ogDescription: seoDescription,
     ogType: 'website',
-    ogImage: clinicInfo?.logo_url || undefined,
+    ogImage: seoImage,
     twitterCard: 'summary_large_image',
-    twitterTitle: clinicInfo ? `${clinicInfo.clinic_name} | VetCard` : 'VetCard',
-    twitterDescription: clinicInfo?.tagline || (clinicInfo ? `${clinicInfo.clinic_name} - Veterinary Clinic` : 'Veterinary Clinic'),
+    twitterTitle: seoTitle,
+    twitterDescription: seoDescription,
   })
 
   useEffect(() => {

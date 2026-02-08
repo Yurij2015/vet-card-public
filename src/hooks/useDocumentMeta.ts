@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 interface MetaConfig {
   title: string
   description?: string
+  keywords?: string
   ogTitle?: string
   ogDescription?: string
   ogType?: string
@@ -34,6 +35,10 @@ export function useDocumentMeta(config: MetaConfig) {
     // Set meta tags
     if (config.description) {
       setMetaTag('description', config.description)
+    }
+
+    if (config.keywords) {
+      setMetaTag('keywords', config.keywords)
     }
 
     if (config.ogTitle) {
