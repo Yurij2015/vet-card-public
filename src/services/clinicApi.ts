@@ -99,6 +99,7 @@ import clinicMapping from '@/data/clinicMapping.json'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://vet.digispace.pro'
 const isDev = import.meta.env.DEV
+const frontendKey = import.meta.env.VITE_FRONTEND_KEY
 
 // Clinic list item with catalog data from /api/clinics/list
 export interface ClinicListItem {
@@ -130,7 +131,11 @@ export async function fetchClinicBySlug(slug: string): Promise<ClinicData> {
   const url = `${baseUrl}/api/clinic-catalog/vet-card/${slug}`
 
   try {
-    const response = await fetch(url)
+    const response = await fetch(url, {
+      headers: {
+        'X-Frontend-Key': frontendKey,
+      },
+    })
 
     if (!response.ok) {
       throw new Error(`Failed to fetch clinic data: ${response.status} ${response.statusText}`)
@@ -151,7 +156,11 @@ export async function fetchClinicsList(): Promise<ClinicListItem[]> {
   const url = `${API_BASE_URL}/api/clinics/list`
 
   try {
-    const response = await fetch(url)
+    const response = await fetch(url, {
+      headers: {
+        'X-Frontend-Key': frontendKey,
+      },
+    })
 
     if (!response.ok) {
       throw new Error(`Failed to fetch clinics list: ${response.status} ${response.statusText}`)
@@ -207,6 +216,7 @@ export async function createAppointment(clinicData: ClinicData, data: Appointmen
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'X-Frontend-Key': frontendKey,
       },
       body: JSON.stringify(data),
     })
@@ -222,4 +232,3 @@ export async function createAppointment(clinicData: ClinicData, data: Appointmen
     throw error
   }
 }
-
