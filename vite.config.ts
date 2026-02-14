@@ -8,6 +8,7 @@ import prerender from '@prerenderer/rollup-plugin'
 import puppeteerRenderer from '@prerenderer/renderer-puppeteer'
 
 const API_BASE_URL = process.env.VITE_API_BASE_URL || 'https://vet.digispace.pro'
+const frontendKey = process.env.VITE_FRONTEND_KEY || ''
 
 interface ClinicInfo {
   slug: string
@@ -23,8 +24,12 @@ async function getClinicRoutes(): Promise<{ routes: string[], clinics: ClinicInf
   const fallbackRoutes = ['/', '/my-clinic', '/my-clinic/appointment']
 
   try {
-    // Get list of clinics with their slugs and tenant domains
-    const response = await fetch(`${API_BASE_URL}/api/clinics/list`)
+    // Get a list of clinics with their slugs and tenant domains
+    const response = await fetch(`${API_BASE_URL}/api/clinics/list`, {
+      headers: {
+        'X-Frontend-Key': frontendKey,
+      },
+    })
 
     if (!response.ok) {
       console.warn(`API returned status ${response.status}, using fallback routes`)
