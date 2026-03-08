@@ -37,18 +37,24 @@ jobs:
       - name: Build project
         run: |
           npm run build --if-present
-          echo "--- debug: dist directory content ---"
-          ls -R dist || echo "dist directory not found"
+          echo "--- debug: dist directory content on runner ---"
+          ls -R dist || echo "dist directory not found or empty on runner"
 
       - name: Create deployment artifact
         env:
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          # package only production build and static assets; exclude node_modules and git
-          # We use a fixed name 'release.tar.gz' to avoid confusion
-          tar -czf release.tar.gz --exclude=.git --exclude=node_modules dist public package.json package-lock.json .env.production --ignore-failed-read
-          # remove env file from runner after packaging for safety
+          # Create a staging directory to ensure the tarball has a flat structure
+          mkdir -p staging
+          cp -r dist public package.json package-lock.json .env.production staging/
+          
+          # Create the tarball from the contents of the staging directory
+          tar -czf release.tar.gz -C staging .
+          
+          # Clean up staging directory and .env.production
+          rm -rf staging
           rm -f .env.production || true
+          
           echo "--- debug: tarball content ---"
           tar -tf release.tar.gz
 
@@ -115,27 +121,18 @@ jobs:
             ARTIFACT_PATH="${{ matrix.server.path }}/artifacts/release.tar.gz"
 
             mkdir -p "$RELEASE_PATH"
-            # Extract without preserving owners/permissions
+            # Extract without preserving owners/permissions.
+            # The tarball is now expected to have a flat structure, so no need for mv logic.
             tar xzf "$ARTIFACT_PATH" --no-same-owner --no-same-permissions -C "$RELEASE_PATH"
-
-            # FIX: Check if files were extracted into a nested directory (e.g. named after SHA) and move them up
-            # This handles the case where scp-action or tar creates an extra directory level
-            if [ -d "$RELEASE_PATH/$GITHUB_SHA" ]; then
-              echo "Detected nested directory '$GITHUB_SHA'. Moving files up..."
-              mv "$RELEASE_PATH/$GITHUB_SHA"/* "$RELEASE_PATH/"
-              rmdir "$RELEASE_PATH/$GITHUB_SHA"
-            elif [ -d "$RELEASE_PATH/release" ]; then
-               echo "Detected nested directory 'release'. Moving files up..."
-               mv "$RELEASE_PATH/release"/* "$RELEASE_PATH/"
-               rmdir "$RELEASE_PATH/release"
-            fi
 
             # Ensure shared storage directories exist (optional for frontend static sites)
             mkdir -p "${{ matrix.server.path }}/storage/{app,public,framework,logs}" || true
             mkdir -p "${{ matrix.server.path }}/storage/framework/{cache,sessions,testing,views}" || true
 
-            echo "--- debug: releases dir listing ---"
+            echo "--- debug: releases dir listing on server ---"
             ls -la "$RELEASE_PATH" || true
+            echo "--- debug: dist dir listing on server ---"
+            ls -la "$RELEASE_PATH/dist" || true
 
             # Try to fix ownership and permissions only when sudo is available on the target.
             if command -v sudo >/dev/null 2>&1; then
