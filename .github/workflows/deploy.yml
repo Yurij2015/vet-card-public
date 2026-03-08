@@ -170,7 +170,7 @@ jobs:
           port: ${{ matrix.server.port }}
           envs: GITHUB_SHA,RELEASE_PATH,ACTIVE_RELEASE_PATH
           script: |
-            ln -sfn "$RELEASE_PATH" "$ACTIVE_RELEASE_PATH"
+            cd ${{ matrix.server.path }} && ln -sfn "releases/${GITHUB_SHA}" current
 
   run-after-hooks:
     name: "${{ matrix.server.name }}: After hook"
