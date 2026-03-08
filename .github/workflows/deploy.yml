@@ -25,7 +25,6 @@ jobs:
           npm install
 
       - name: Generate .env.production from repository variables
-        # Use repository Variables (visible in Settings -> Secrets and variables -> Actions -> Variables)
         env:
           VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
           VITE_FRONTEND_KEY: ${{ vars.VITE_FRONTEND_KEY }}
@@ -35,26 +34,26 @@ jobs:
           echo ".env.production created"
 
       - name: Build project
+        run: npm run build --if-present
+
+      - name: Verify build output
         run: |
-          npm run build --if-present
-          echo "--- debug: dist directory content on runner ---"
-          ls -R dist || echo "dist directory not found or empty on runner"
+          echo "--- Verifying build output ---"
+          if [ -z "$(ls -A dist)" ]; then
+            echo "Error: The 'dist' directory is empty after build. The build process likely failed to produce any files."
+            exit 1
+          else
+            echo "Build output verified. 'dist' directory contains files:"
+            ls -R dist
+          fi
 
       - name: Create deployment artifact
-        env:
-          GITHUB_SHA: ${{ github.sha }}
         run: |
-          # Create a staging directory to ensure the tarball has a flat structure
           mkdir -p staging
           cp -r dist public package.json package-lock.json .env.production staging/
-          
-          # Create the tarball from the contents of the staging directory
           tar -czf release.tar.gz -C staging .
-          
-          # Clean up staging directory and .env.production
           rm -rf staging
           rm -f .env.production || true
-          
           echo "--- debug: tarball content ---"
           tar -tf release.tar.gz
 
@@ -87,7 +86,7 @@ jobs:
           name: app-build
 
       - name: Create artifact directory on server
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3 # Pinned to stable version
         with:
           host: ${{ matrix.server.ip }}
           username: ${{ matrix.server.username }}
@@ -96,7 +95,7 @@ jobs:
           script: mkdir -p ${{ matrix.server.path }}/artifacts
 
       - name: Upload artifact to server
-        uses: appleboy/scp-action@master
+        uses: appleboy/scp-action@v0.1.7 # Pinned to stable version
         with:
           host: ${{ matrix.server.ip }}
           username: ${{ matrix.server.username }}
@@ -106,7 +105,7 @@ jobs:
           target: ${{ matrix.server.path }}/artifacts
 
       - name: Extract archive and create directories on server
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3 # Pinned to stable version
         env:
           GITHUB_SHA: ${{ github.sha }}
         with:
@@ -121,24 +120,10 @@ jobs:
             ARTIFACT_PATH="${{ matrix.server.path }}/artifacts/release.tar.gz"
 
             mkdir -p "$RELEASE_PATH"
-            # Extract without preserving owners/permissions.
-            # The tarball is now expected to have a flat structure, so no need for mv logic.
             tar xzf "$ARTIFACT_PATH" --no-same-owner --no-same-permissions -C "$RELEASE_PATH"
 
-            # Ensure shared storage directories exist (optional for frontend static sites)
-            mkdir -p "${{ matrix.server.path }}/storage/{app,public,framework,logs}" || true
-            mkdir -p "${{ matrix.server.path }}/storage/framework/{cache,sessions,testing,views}" || true
-
             echo "--- debug: releases dir listing on server ---"
-            ls -la "$RELEASE_PATH" || true
-            echo "--- debug: dist dir listing on server ---"
-            ls -la "$RELEASE_PATH/dist" || true
-
-            # Try to fix ownership and permissions only when sudo is available on the target.
-            if command -v sudo >/dev/null 2>&1; then
-              sudo chown -R ${{ matrix.server.username }}:www-data "$RELEASE_PATH" || true
-              sudo chmod -R ug+rwx "$RELEASE_PATH" || true
-            fi
+            ls -la "$RELEASE_PATH"
 
   run-before-hooks:
     name: "${{ matrix.server.name }}: Before hook"
@@ -149,21 +134,15 @@ jobs:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
     steps:
       - name: Run before hooks
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3 # Pinned to stable version
         env:
           GITHUB_SHA: ${{ github.sha }}
-          RELEASE_PATH: ${{ matrix.server.path }}/releases/${{ github.sha }}
-          ACTIVE_RELEASE_PATH: ${{ matrix.server.path }}/current
-          STORAGE_PATH: ${{ matrix.server.path }}/storage
-          BASE_PATH: ${{ matrix.server.path }}
         with:
           host: ${{ matrix.server.ip }}
           username: ${{ matrix.server.username }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ matrix.server.port }}
-          envs: GITHUB_SHA,RELEASE_PATH,ACTIVE_RELEASE_PATH,STORAGE_PATH,BASE_PATH
           script: |
-            # Optional: run any project-specific before hooks on the server (e.g., purge caches)
             if [ -n "${{ matrix.server.beforeHooks }}" ]; then
               eval "${{ matrix.server.beforeHooks }}"
             fi
@@ -177,27 +156,19 @@ jobs:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
     steps:
       - name: Activate release
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3 # Pinned to stable version
         env:
           GITHUB_SHA: ${{ github.sha }}
           RELEASE_PATH: ${{ matrix.server.path }}/releases/${{ github.sha }}
           ACTIVE_RELEASE_PATH: ${{ matrix.server.path }}/current
-          STORAGE_PATH: ${{ matrix.server.path }}/storage
-          BASE_PATH: ${{ matrix.server.path }}
         with:
           host: ${{ matrix.server.ip }}
           username: ${{ matrix.server.username }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ matrix.server.port }}
-          envs: GITHUB_SHA,RELEASE_PATH,ACTIVE_RELEASE_PATH,STORAGE_PATH,BASE_PATH
+          envs: GITHUB_SHA,RELEASE_PATH,ACTIVE_RELEASE_PATH
           script: |
-            # Symlink the release to 'current' so the webserver serves the new build
             ln -sfn "$RELEASE_PATH" "$ACTIVE_RELEASE_PATH"
-
-            # Optionally symlink a persistent .env if server manages it
-            if [ -f "${BASE_PATH}/.env" ]; then
-              ln -s -f "${BASE_PATH}/.env" "$RELEASE_PATH/.env" || true
-            fi
 
   run-after-hooks:
     name: "${{ matrix.server.name }}: After hook"
@@ -208,19 +179,14 @@ jobs:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
     steps:
       - name: Run after hooks
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3 # Pinned to stable version
         env:
           GITHUB_SHA: ${{ github.sha }}
-          RELEASE_PATH: ${{ matrix.server.path }}/releases/${{ github.sha }}
-          ACTIVE_RELEASE_PATH: ${{ matrix.server.path }}/current
-          STORAGE_PATH: ${{ matrix.server.path }}/storage
-          BASE_PATH: ${{ matrix.server.path }}
         with:
           host: ${{ matrix.server.ip }}
           username: ${{ matrix.server.username }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ matrix.server.port }}
-          envs: GITHUB_SHA,RELEASE_PATH,ACTIVE_RELEASE_PATH,STORAGE_PATH,BASE_PATH
           script: |
             if [ -n "${{ matrix.server.afterHooks }}" ]; then
               eval "${{ matrix.server.afterHooks }}"
@@ -235,7 +201,7 @@ jobs:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
     steps:
       - name: Clean old releases and artifacts
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3 # Pinned to stable version
         env:
           RELEASES_PATH: ${{ matrix.server.path }}/releases
           ARTIFACTS_PATH: ${{ matrix.server.path }}/artifacts
