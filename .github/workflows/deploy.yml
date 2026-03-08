@@ -3,7 +3,7 @@ name: Deploy VetCard Frontend
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   create-deployment-artifacts:
@@ -17,7 +17,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: "22"
 
       - name: Install dependencies
         run: |
@@ -49,11 +49,8 @@ jobs:
 
       - name: Create deployment artifact
         run: |
-          mkdir -p staging
-          cp -r dist public package.json package-lock.json .env.production staging/
-          tar -czf release.tar.gz -C staging .
-          rm -rf staging
-          rm -f .env.production || true
+          # Package ONLY the contents of the dist directory for a clean static site deployment
+          tar -czf release.tar.gz -C dist .
           echo "--- debug: tarball content ---"
           tar -tf release.tar.gz
 
@@ -128,7 +125,7 @@ jobs:
   run-before-hooks:
     name: "${{ matrix.server.name }}: Before hook"
     runs-on: ubuntu-latest
-    needs: [ create-deployment-artifacts, prepare-release-on-servers ]
+    needs: [create-deployment-artifacts, prepare-release-on-servers]
     strategy:
       matrix:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
@@ -150,7 +147,12 @@ jobs:
   activate-release:
     name: "${{ matrix.server.name }}: Activate release"
     runs-on: ubuntu-latest
-    needs: [ create-deployment-artifacts, prepare-release-on-servers, run-before-hooks ]
+    needs:
+      [
+        create-deployment-artifacts,
+        prepare-release-on-servers,
+        run-before-hooks,
+      ]
     strategy:
       matrix:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
@@ -173,7 +175,13 @@ jobs:
   run-after-hooks:
     name: "${{ matrix.server.name }}: After hook"
     runs-on: ubuntu-latest
-    needs: [ create-deployment-artifacts, prepare-release-on-servers, run-before-hooks, activate-release ]
+    needs:
+      [
+        create-deployment-artifacts,
+        prepare-release-on-servers,
+        run-before-hooks,
+        activate-release,
+      ]
     strategy:
       matrix:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
@@ -195,7 +203,14 @@ jobs:
   clean-up:
     name: "${{ matrix.server.name }}: Clean up"
     runs-on: ubuntu-latest
-    needs: [ create-deployment-artifacts, prepare-release-on-servers, run-before-hooks, activate-release, run-after-hooks ]
+    needs:
+      [
+        create-deployment-artifacts,
+        prepare-release-on-servers,
+        run-before-hooks,
+        activate-release,
+        run-after-hooks,
+      ]
     strategy:
       matrix:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
@@ -218,7 +233,7 @@ jobs:
   delete-artifact:
     name: Delete GitHub artifact
     runs-on: ubuntu-latest
-    needs: [ create-deployment-artifacts, clean-up ]
+    needs: [create-deployment-artifacts, clean-up]
     if: always()
     steps:
       - name: Delete artifact
