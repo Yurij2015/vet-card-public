@@ -179,7 +179,7 @@ jobs:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
     steps:
       - name: Run after hooks
-        uses: appleboy/ssh-action@v1.0.3 # Pinned to stable version
+        uses: appleboy/ssh-action@v1.0.3 # Pinned to a stable version
         env:
           GITHUB_SHA: ${{ github.sha }}
         with:
