@@ -97,9 +97,9 @@ export interface ClinicData {
 // Mapping slug → tenant_domain (generated at build time)
 import clinicMapping from '@/data/clinicMapping.json'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://vet.digispace.pro'
-const isDev = import.meta.env.DEV
-const frontendKey = import.meta.env.VITE_FRONTEND_KEY
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://vet.digispace.pro'
+const isDev = process.env.NODE_ENV !== 'production'
+const frontendKey = process.env.NEXT_PUBLIC_FRONTEND_KEY || ''
 
 // Clinic list item with catalog data from /api/clinics/list
 export interface ClinicListItem {
@@ -222,8 +222,39 @@ export async function createAppointment(clinicData: ClinicData, data: Appointmen
     })
 
     if (!response.ok) {
+      // Try to parse structured validation errors from the API and return a readable message
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `Failed to create appointment: ${response.status}`)
+
+      // Common shapes: { message: '...', errors: { field: ['msg'] } } or { errors: ['msg'] }
+      let msg = ''
+
+      if (errorData) {
+        if (typeof errorData.message === 'string' && errorData.message.length > 0) {
+          msg = errorData.message
+        } else if (errorData.errors) {
+          // errors may be object or array
+          if (Array.isArray(errorData.errors)) {
+            msg = errorData.errors.join('; ')
+          } else if (typeof errorData.errors === 'object') {
+            // join object values
+            msg = Object.entries(errorData.errors)
+              .map(([k, v]) => {
+                if (Array.isArray(v)) return `${k}: ${v.join(', ')}`
+                return `${k}: ${String(v)}`
+              })
+              .join('; ')
+          }
+        } else if (typeof errorData === 'string' && errorData.length > 0) {
+          msg = errorData
+        }
+      }
+
+      if (!msg) msg = `Failed to create appointment: ${response.status}`
+
+      const err = new Error(msg)
+      // Attach original payload for debugging
+      try { (err as any).response = { status: response.status, data: errorData } } catch {}
+      throw err
     }
 
     return { success: true }

@@ -1,75 +1,28 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useDocumentMeta } from '@/hooks/useDocumentMeta'
-import { fetchClinicsList, type ClinicListItem } from '@/services/clinicApi'
+import Link from 'next/link'
+import Head from 'next/head'
+import { type ClinicListItem } from '@/services/clinicApi'
 import PetsIcon from '@/components/PetsIcon'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 
-export default function CatalogPage() {
+interface CatalogPageProps {
+  clinics: ClinicListItem[]
+}
+
+export default function CatalogPage({ clinics }: CatalogPageProps) {
   const { t } = useTranslation()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [clinics, setClinics] = useState<ClinicListItem[]>([])
-
-  useDocumentMeta({
-    title: t('seo.catalogTitle'),
-    description: t('seo.catalogDescription'),
-    keywords: t('seo.catalogKeywords'),
-    ogTitle: t('seo.catalogTitle'),
-    ogDescription: t('catalog.subtitle'),
-    ogType: 'website',
-  })
-
-  useEffect(() => {
-    async function loadClinics() {
-      try {
-        setLoading(true)
-        setError(null)
-
-        // Fetch all clinics with catalog details
-        const catalogData = await fetchClinicsList()
-        setClinics(catalogData)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load clinics')
-        console.error('Error loading clinics:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadClinics()
-  }, [])
-
-  // Loading State
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-          <p className="mt-4 text-xl text-gray-600">{t('catalog.loading')}</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Error State
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-6">
-          <svg className="w-20 h-20 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('catalog.errorTitle')}</h2>
-          <p className="text-lg text-gray-600">{error}</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Head>
+        <title>{t('seo.catalogTitle')}</title>
+        <meta name="description" content={t('seo.catalogDescription')} />
+        <meta name="keywords" content={t('seo.catalogKeywords')} />
+        <meta property="og:title" content={t('seo.catalogTitle')} />
+        <meta property="og:description" content={t('catalog.subtitle')} />
+        <meta property="og:type" content="website" />
+      </Head>
+
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -80,7 +33,7 @@ export default function CatalogPage() {
             </div>
             <div className="flex items-center gap-4">
               <Link
-                to="/my-appointments"
+                href="/my-appointments"
                 className="hidden sm:flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -115,7 +68,7 @@ export default function CatalogPage() {
             {clinics.map((clinic) => (
               <Link
                 key={clinic.slug}
-                to={`/${clinic.slug}`}
+                href={`/${clinic.slug}`}
                 className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow overflow-hidden group"
               >
                 {/* Card Header with Color */}

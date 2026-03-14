@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useDocumentMeta } from '@/hooks/useDocumentMeta'
-import { fetchClinicBySlug, type ClinicData } from '@/services/clinicApi'
+import { useMemo } from 'react'
+import { useRouter } from 'next/router'
+import Link from 'next/link'
+import Head from 'next/head'
+import { type ClinicData } from '@/services/clinicApi'
 import PetsIcon from '@/components/PetsIcon'
 
 const defaultServices = [
@@ -18,54 +19,18 @@ const defaultDoctors = [
   { id: 2, name: 'Dr. Edward Curtis', specialization: 'Veterinarian', photo_url: undefined }
 ]
 
-export default function ClinicPage() {
-  const { slug } = useParams<{ slug: string }>()
-  const navigate = useNavigate()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [clinicInfo, setClinicInfo] = useState<ClinicData | null>(null)
+interface ClinicPageProps {
+  slug: string
+  clinicData: ClinicData
+}
 
-  // Set document meta tags for SEO - use API SEO data if available
+export default function ClinicPage({ slug, clinicData: clinicInfo }: ClinicPageProps) {
+  const router = useRouter()
+
   const seoTitle = clinicInfo?.seo?.title || (clinicInfo ? `${clinicInfo.clinic_name} | VetCard` : 'VetCard')
   const seoDescription = clinicInfo?.seo?.description || clinicInfo?.tagline || (clinicInfo ? `${clinicInfo.clinic_name} - Veterinary Clinic` : 'Veterinary Clinic')
   const seoImage = clinicInfo?.seo?.og_image || clinicInfo?.logo_url || undefined
 
-  useDocumentMeta({
-    title: seoTitle,
-    description: seoDescription,
-    keywords: clinicInfo?.seo?.keywords?.join(', '),
-    ogTitle: seoTitle,
-    ogDescription: seoDescription,
-    ogType: 'website',
-    ogImage: seoImage,
-    twitterCard: 'summary_large_image',
-    twitterTitle: seoTitle,
-    twitterDescription: seoDescription,
-  })
-
-  useEffect(() => {
-    async function loadClinic() {
-      if (!slug) {
-        setError('No clinic slug provided')
-        setLoading(false)
-        return
-      }
-
-      try {
-        setLoading(true)
-        setError(null)
-        const data = await fetchClinicBySlug(slug)
-        setClinicInfo(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load clinic data')
-        console.error('Error loading clinic:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadClinic()
-  }, [slug])
 
   const visibleSections = useMemo(() => {
     if (!clinicInfo?.sections) return []
@@ -152,7 +117,7 @@ export default function ClinicPage() {
   }
 
   const makeAppointment = () => {
-    navigate(`/${slug}/appointment`)
+    router.push(`/${slug}/appointment`)
   }
 
   const openMaps = () => {
@@ -173,33 +138,6 @@ export default function ClinicPage() {
     }
   }
 
-  // Loading State
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-          <p className="mt-4 text-xl text-gray-600">Loading clinic information...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Error State
-  if (error) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-6">
-          <svg className="w-20 h-20 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Clinic</h2>
-          <p className="text-lg text-gray-600">{error}</p>
-        </div>
-      </div>
-    )
-  }
-
   if (!clinicInfo) return null
 
   const themeColor = clinicInfo.color || '#2563eb'
@@ -207,19 +145,34 @@ export default function ClinicPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Head>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        {clinicInfo?.seo?.keywords && (
+          <meta name="keywords" content={clinicInfo.seo.keywords.join(', ')} />
+        )}
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:type" content="website" />
+        {seoImage && <meta property="og:image" content={seoImage} />}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDescription} />
+      </Head>
+
       {/* Desktop Layout */}
       <div className="hidden lg:block">
         {/* Header */}
         <header className="bg-white shadow-sm">
           <div className="max-w-6xl mx-auto px-8 py-6">
             <div className="flex items-center justify-between">
-              <Link to="/" className="flex items-center gap-3">
+              <Link href="/" className="flex items-center gap-3">
                 <PetsIcon color={themeColor} className="h-8 w-8" />
                 <span className="text-2xl font-bold text-gray-900">VetCard</span>
               </Link>
               <div className="flex items-center gap-4">
                 <Link
-                  to="/my-appointments"
+                  href="/my-appointments"
                   className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                   title="My Appointments"
                 >
@@ -392,12 +345,12 @@ export default function ClinicPage() {
         {/* VetCard Header */}
         <div className="bg-white px-6 py-6">
           <div className="flex items-center justify-between mb-4">
-            <Link to="/" className="flex items-center gap-2">
+            <Link href="/" className="flex items-center gap-2">
               <PetsIcon color={themeColor} className="h-8 w-8" />
               <span className="text-base font-bold text-gray-800">VetCard</span>
             </Link>
             <Link
-              to="/my-appointments"
+              href="/my-appointments"
               className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

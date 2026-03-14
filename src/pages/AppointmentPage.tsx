@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useDocumentMeta } from '@/hooks/useDocumentMeta'
-import { fetchClinicBySlug, createAppointment, type ClinicData } from '@/services/clinicApi'
+import { useRouter } from 'next/router'
+import Link from 'next/link'
+import Head from 'next/head'
+import { createAppointment, type ClinicData } from '@/services/clinicApi'
 import { saveAppointment } from '@/services/appointmentStorage'
 import { getUserProfile, saveUserProfile } from '@/services/userStorage'
 import PetsIcon from '@/components/PetsIcon'
@@ -25,12 +26,14 @@ const defaultTimeSlots: TimeSlot[] = [
 const animalTypes = ['Dog', 'Cat', 'Bird', 'Rabbit', 'Hamster', 'Other']
 const petAgeOptions = ['Puppy/Kitten', 'Young', 'Adult', 'Senior', 'Unknown']
 
-export default function AppointmentPage() {
-  const { slug } = useParams<{ slug: string }>()
-  const navigate = useNavigate()
+interface AppointmentPageProps {
+  slug: string
+  clinicData: ClinicData
+}
 
-  const [clinicData, setClinicData] = useState<ClinicData | null>(null)
-  const [loading, setLoading] = useState(true)
+export default function AppointmentPage({ slug, clinicData }: AppointmentPageProps) {
+  const router = useRouter()
+
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
@@ -62,38 +65,14 @@ export default function AppointmentPage() {
     }
   }, [])
 
+  // Auto-select first branch if only one exists
   useEffect(() => {
-    async function loadClinic() {
-      if (!slug) return
-      try {
-        setLoading(true)
-        const data = await fetchClinicBySlug(slug)
-        setClinicData(data)
-        // Auto-select first branch if only one exists
-        if (data.branches && data.branches.length === 1) {
-          setBranchId(data.branches[0].id)
-        }
-      } catch (err) {
-        console.error('Error loading clinic:', err)
-      } finally {
-        setLoading(false)
-      }
+    if (clinicData?.branches && clinicData.branches.length === 1) {
+      setBranchId(clinicData.branches[0].id)
     }
-    loadClinic()
-  }, [slug])
+  }, [clinicData])
 
   const themeColor = clinicData?.color || '#2563eb'
-
-  // Set document meta tags for SEO - appointment page should not be indexed
-  useDocumentMeta({
-    title: `Book Appointment | ${clinicData?.clinic_name || 'VetCard'}`,
-    description: `Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`,
-    ogTitle: `Book Appointment | ${clinicData?.clinic_name || 'VetCard'}`,
-    ogDescription: `Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`,
-    ogType: 'website',
-    ogImage: clinicData?.seo?.og_image || clinicData?.logo_url || undefined,
-    robots: 'noindex',
-  })
 
   const monthName = useMemo(() => {
     return currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
@@ -134,11 +113,7 @@ export default function AppointmentPage() {
   }
 
   const goBack = () => {
-    if (slug) {
-      navigate(`/${slug}`)
-    } else {
-      navigate(-1)
-    }
+    router.push(`/${slug}`)
   }
 
   const confirmAppointment = async () => {
@@ -192,6 +167,14 @@ export default function AppointmentPage() {
       setSubmitError(null)
       setSubmitSuccess(false)
 
+          // Client-side email validation
+          const emailRegex = /^\S+@\S+\.\S+$/
+          if (!emailRegex.test(email)) {
+            setSubmitError('Please enter a valid email address')
+            setSubmitting(false)
+            return
+          }
+
       // Call the API to create the appointment using clinicData for tenant domain
       await createAppointment(clinicData, appointmentData)
 
@@ -224,15 +207,13 @@ export default function AppointmentPage() {
 
       // Optionally, navigate to a success page or reset the form
       setTimeout(() => {
-        if (slug) {
-          navigate(`/${slug}`)
-        } else {
-          navigate('/')
-        }
+        router.push(`/${slug}`)
       }, 2000)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error confirming appointment:', error)
-      setSubmitError('Failed to confirm appointment. Please try again.')
+      // Prefer error.message (which we crafted in createAppointment) if available
+      const msg = error?.message || 'Failed to confirm appointment. Please try again.'
+      setSubmitError(msg)
     } finally {
       setSubmitting(false)
     }
@@ -246,33 +227,31 @@ export default function AppointmentPage() {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-          <p className="mt-4 text-xl text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-
   return (
     <div className="min-h-screen bg-gray-50">
+      <Head>
+        <title>Book Appointment | {clinicData?.clinic_name || 'VetCard'}</title>
+        <meta name="description" content={`Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`} />
+        <meta property="og:title" content={`Book Appointment | ${clinicData?.clinic_name || 'VetCard'}`} />
+        <meta property="og:description" content={`Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`} />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content={clinicData?.seo?.og_image || clinicData?.logo_url || undefined} />
+        <meta name="robots" content="noindex" />
+      </Head>
+
       {/* Desktop Layout */}
       <div className="hidden lg:block">
         {/* Header */}
         <header className="bg-white shadow-sm">
           <div className="max-w-6xl mx-auto px-8 py-6">
             <div className="flex items-center justify-between">
-              <Link to="/" className="flex items-center gap-3">
+              <Link href="/" className="flex items-center gap-3">
                 <PetsIcon color={themeColor} className="h-8 w-8" />
                 <span className="text-2xl font-bold text-gray-900">VetCard</span>
               </Link>
               <div className="flex items-center gap-4">
                 <Link
-                  to="/my-appointments"
+                  href="/my-appointments"
                   className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                   title="My Appointments"
                 >
@@ -584,7 +563,7 @@ export default function AppointmentPage() {
                 <h1 className="text-xl font-bold text-gray-900">Make an Appointment</h1>
               </div>
               <Link
-                to="/my-appointments"
+                href="/my-appointments"
                 className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
