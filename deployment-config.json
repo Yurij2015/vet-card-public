@@ -5,7 +5,7 @@
         "port": "2225",
         "username": "yurii",
         "beforeHooks": "",
-        "afterHooks": "docker restart caddy",
+        "afterHooks": "docker restart caddy vet-card-node",
         "path": "/home/yurii/vet-card-public"
     }
 ]
