@@ -51,8 +51,9 @@ jobs:
           cp -r .next/static .next/standalone/.next/
           cp -r public .next/standalone/
           
-          # Archive the .next/standalone directory as a whole to preserve structure
-          tar -czf "${GITHUB_SHA}".tar.gz .next/standalone
+          # Archive the contents of .next/standalone directly to avoid double nesting
+          # This puts server.js, .next/, and public/ at the root of the archive
+          tar -czf "${GITHUB_SHA}".tar.gz -C .next/standalone .
           
       - name: Store artifact for distribution
         uses: actions/upload-artifact@v4
@@ -235,12 +236,13 @@ jobs:
           port: ${{ matrix.server.port }}
           envs: GITHUB_SHA,RELEASE_PATH,ACTIVE_RELEASE_PATH,STORAGE_PATH,BASE_PATH
           script: |
-            # Symlink the release to 'current' so the webserver serves the new build
-            ln -sfn "$RELEASE_PATH" "$ACTIVE_RELEASE_PATH"
+            # Symlink the release to 'current' using a RELATIVE path
+            # This is critical for Docker volume mounts to follow the symlink correctly
+            cd "$BASE_PATH" && ln -sfn "releases/${GITHUB_SHA}" current
 
             # Optionally symlink a persistent .env if server manages it
             if [ -f "${BASE_PATH}/.env" ]; then
-              ln -s -f "${BASE_PATH}/.env" "$RELEASE_PATH/.env" || true
+              ln -s -f "../.env" "releases/${GITHUB_SHA}/.env" || true
             fi
 
   run-after-hooks:
