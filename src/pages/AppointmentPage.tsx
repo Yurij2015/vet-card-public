@@ -27,7 +27,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
   const [selectedTime, setSelectedTime] = useState<string>('')
-  const [timeSlots, setTimeSlots] = useState<Array<{ time: string, available: boolean }>>([])
+  const [timeSlots, setTimeSlots] = useState<Array<{ time: string, available: boolean, count: number }>>([])
   const [loadingSlots, setLoadingSlots] = useState(false)
 
   // Form fields
@@ -83,15 +83,16 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
         
         const slots = await getAvailableSlots(clinicData, formattedDate, branchId)
         
-        // Deduplicate slots by time to avoid visual clutter and key warnings
-        const uniqueSlots = slots.reduce((acc: Array<{time: string, available: boolean}>, current) => {
+        // Deduplicate slots by time to avoid visual clutter and key warnings, and count available slots
+        const uniqueSlots = slots.reduce((acc: Array<{time: string, available: boolean, count: number}>, current) => {
           const x = acc.find(item => item.time === current.time)
           if (!x) {
-            return acc.concat([current])
+            return acc.concat([{ ...current, count: current.available ? 1 : 0 }])
           } else {
             // If we find a duplicate, prefer the one that is 'available' if the existing one isn't
-            if (!x.available && current.available) {
+            if (current.available) {
               x.available = true
+              x.count += 1
             }
             return acc
           }
@@ -414,7 +415,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                           color: 'white'
                         } : {}}
                       >
-                        {formatTime(slot.time)}
+                        {formatTime(slot.time)} {slot.available && slot.count > 0 && `(${slot.count})`}
                       </button>
                     ))}
                   </div>
@@ -461,6 +462,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                   <div>
                     <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.ownerName')}</label>
                     <input
+                      suppressHydrationWarning
                       value={ownerName}
                       onChange={(e) => setOwnerName(e.target.value)}
                       type="text"
@@ -474,6 +476,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                   <div>
                     <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.petName')}</label>
                     <input
+                      suppressHydrationWarning
                       value={petName}
                       onChange={(e) => setPetName(e.target.value)}
                       type="text"
@@ -487,6 +490,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                   <div>
                     <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.animalType')}</label>
                     <select
+                      suppressHydrationWarning
                       value={animalType}
                       onChange={(e) => setAnimalType(e.target.value)}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
@@ -494,7 +498,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                       onFocus={(e) => e.target.style.borderColor = themeColor}
                       onBlur={(e) => { if (!animalType) e.target.style.borderColor = '' }}
                     >
-                      <option value="">{i18n.t('appointmentPage.placeholders.selectAnimalType') || 'Select animal type'}</option>
+                      <option suppressHydrationWarning value="">{i18n.t('appointmentPage.placeholders.selectAnimalType') || 'Select animal type'}</option>
                       {animalTypes.map((type) => (
                         <option key={type} value={type}>{type}</option>
                       ))}
@@ -503,6 +507,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                   <div>
                     <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.petAge')}</label>
                     <select
+                      suppressHydrationWarning
                       value={petAge}
                       onChange={(e) => setPetAge(e.target.value)}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
@@ -510,7 +515,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                       onFocus={(e) => e.target.style.borderColor = themeColor}
                       onBlur={(e) => { if (!petAge) e.target.style.borderColor = '' }}
                     >
-                      <option value="">{i18n.t('appointmentPage.placeholders.selectPetAge') || 'Select pet age'}</option>
+                      <option suppressHydrationWarning value="">{i18n.t('appointmentPage.placeholders.selectPetAge') || 'Select pet age'}</option>
                       {petAgeOptions.map((age) => (
                         <option key={age} value={age}>{age}</option>
                       ))}
@@ -519,6 +524,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                   <div>
                     <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.ownerPhone')}</label>
                     <input
+                      suppressHydrationWarning
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       type="tel"
@@ -532,6 +538,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                   <div>
                     <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.ownerEmail')}</label>
                     <input
+                      suppressHydrationWarning
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       type="email"
@@ -545,6 +552,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                   <div>
                     <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.serviceReason') || 'Reason for Visit'}</label>
                     <textarea
+                      suppressHydrationWarning
                       value={serviceReason}
                       onChange={(e) => setServiceReason(e.target.value)}
                       placeholder={i18n.t('appointmentPage.placeholders.serviceReason') || "Enter the reason for your visit"}
@@ -720,7 +728,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                       borderColor: 'transparent'
                     } : {}}
                   >
-                    {formatTime(slot.time)}
+                    {formatTime(slot.time)} {slot.available && slot.count > 0 && `(${slot.count})`}
                   </button>
                 ))}
               </div>
