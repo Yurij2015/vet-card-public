@@ -85,36 +85,12 @@ export const getStaticProps: GetStaticProps<Props> = async ({ params }) => {
   }
 
   if (!clinicData) {
-    // During local development, avoid 404 when the external API or build-time data is missing.
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn(`Clinic data for slug "${slug}" not found — rendering development stub`)
-      const stub: ClinicData = {
-        id: 0,
-        tenant_id: '',
-        color: '#2563eb',
-        clinic_name: slug,
-        tagline: 'Demo clinic (development fallback)',
-        enable_appointment_button: false,
-        slug,
-        phone: '',
-        email: undefined,
-        address: '',
-        logo_url: null,
-        sections: [],
-        services: [],
-        doctors: [],
-        opening_hours: undefined,
-        gallery: [],
-        reviews: [],
-        seo: { title: `${slug} | VetCard`, description: '', keywords: [], og_image: null },
-      }
-
-      return { props: { slug, clinicData: stub } }
-    }
 
     return { notFound: true }
   }
 
-  return { props: { slug, clinicData } }
+  // Ensure no undefined values in clinicData (for serialization)
+  const safeClinicData = { ...clinicData, email: clinicData.email ?? null, opening_hours: clinicData.opening_hours ?? null }
+  return { props: { slug, clinicData: safeClinicData } }
 }
 

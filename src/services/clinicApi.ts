@@ -77,12 +77,12 @@ export interface ClinicData {
   sections?: Section[]
   slug: string
   phone: string
-  email?: string
+  email?: string | null
   address: string
   logo_url: string | null
   service_ids?: number[]
   doctor_ids?: number[]
-  opening_hours?: OpeningHours
+  opening_hours?: OpeningHours | null
   gallery?: Gallery[]
   reviews?: Review[]
   services?: Service[]
@@ -124,56 +124,6 @@ function getTenantDomain(slug: string): string {
   return mapping[slug] || API_BASE_URL
 }
 
-export async function fetchClinicBySlug(slug: string): Promise<ClinicData> {
-  const tenantDomain = getTenantDomain(slug)
-  const baseUrl = tenantDomain.startsWith('http') ? tenantDomain : `https://${tenantDomain}`
-
-  const url = `${baseUrl}/api/clinic-catalog/vet-card/${slug}`
-
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'X-Frontend-Key': frontendKey,
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch clinic data: ${response.status} ${response.statusText}`)
-    }
-
-    const responseData = await response.json()
-
-    // Extract data from a nested structure if it exists
-    return responseData.data || responseData
-  } catch (error) {
-    console.error('Error fetching clinic data:', error)
-    throw error
-  }
-}
-
-// Fetch list of all clinics for catalog
-export async function fetchClinicsList(): Promise<ClinicListItem[]> {
-  const url = `${API_BASE_URL}/api/clinics/list`
-
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'X-Frontend-Key': frontendKey,
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch clinics list: ${response.status} ${response.statusText}`)
-    }
-
-    const data = await response.json()
-    return data.data || data
-  } catch (error) {
-    console.error('Error fetching clinics list:', error)
-    throw error
-  }
-}
-
 // Appointment data for booking
 export interface AppointmentData {
   owner_name: string
@@ -204,7 +154,7 @@ function getTenantDomainFromClinic(clinicData: ClinicData): string {
   return getTenantDomain(clinicData.slug)
 }
 
-// Create appointment at clinic
+// Create appointment at a clinic
 export async function createAppointment(clinicData: ClinicData, data: AppointmentData): Promise<{ success: boolean; message?: string }> {
   const tenantDomain = getTenantDomainFromClinic(clinicData)
   const baseUrl = tenantDomain.startsWith('http') ? tenantDomain : `https://${tenantDomain}`

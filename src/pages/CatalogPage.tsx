@@ -4,13 +4,22 @@ import Head from 'next/head'
 import { type ClinicListItem } from '@/services/clinicApi'
 import PetsIcon from '@/components/PetsIcon'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { useEffect } from 'react'
 
 interface CatalogPageProps {
   clinics: ClinicListItem[]
+  lang: string
 }
 
-export default function CatalogPage({ clinics }: CatalogPageProps) {
-  const { t } = useTranslation()
+export default function CatalogPage({ clinics, lang }: CatalogPageProps) {
+  const { i18n, t } = useTranslation()
+
+  // Set language on mount if different
+  useEffect(() => {
+    if (i18n.language !== lang) {
+      i18n.changeLanguage(lang)
+    }
+  }, [lang, i18n])
 
   return (
     <div className="min-h-screen bg-gray-50">

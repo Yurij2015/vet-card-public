@@ -4,13 +4,14 @@ import type { ClinicListItem } from '@/services/clinicApi'
 
 interface Props {
   clinics: ClinicListItem[]
+  lang: string
 }
 
-export default function IndexPage({ clinics }: Props) {
-  return <CatalogPage clinics={clinics} />
+export default function IndexPage({ clinics, lang }: Props) {
+  return <CatalogPage clinics={clinics} lang={lang} />
 }
 
-export const getStaticProps: GetStaticProps<Props> = async () => {
+export const getStaticProps: GetStaticProps<Props> = async (context) => {
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://vet.digispace.pro'
   const frontendKey = process.env.NEXT_PUBLIC_FRONTEND_KEY || ''
 
@@ -42,6 +43,8 @@ export const getStaticProps: GetStaticProps<Props> = async () => {
     }
   }
 
-  return { props: { clinics } }
-}
+  // For now, default to 'uk'. For real i18n, generate per-locale pages.
+  const lang = 'uk'
 
+  return { props: { clinics, lang } }
+}

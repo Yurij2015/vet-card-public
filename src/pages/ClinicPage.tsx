@@ -15,13 +15,20 @@ const defaultServices = [
 ]
 
 const defaultDoctors = [
-  { id: 1, name: 'Dr. Stacy Moreno', specialization: 'Veterinarian', photo_url: undefined },
-  { id: 2, name: 'Dr. Edward Curtis', specialization: 'Veterinarian', photo_url: undefined }
+  { id: 1, name: 'Dr. Stacy Moreno', specialization: 'Veterinarian', avatar_url: undefined },
+  { id: 2, name: 'Dr. Edward Curtis', specialization: 'Veterinarian', avatar_url: undefined }
 ]
 
 interface ClinicPageProps {
   slug: string
   clinicData: ClinicData
+}
+
+interface DisplayDoctor {
+  id: number;
+  name: string;
+  specialization: string;
+  avatar_url?: string;
 }
 
 export default function ClinicPage({ slug, clinicData: clinicInfo }: ClinicPageProps) {
@@ -91,9 +98,13 @@ export default function ClinicPage({ slug, clinicData: clinicInfo }: ClinicPageP
     return defaultServices
   }, [clinicInfo?.services])
 
-  const displayDoctors = useMemo(() => {
+  const displayDoctors = useMemo<DisplayDoctor[]>(() => {
     if (clinicInfo?.doctors && clinicInfo.doctors.length > 0) {
-      return clinicInfo.doctors
+      // Ensure avatar_url is always present, mapping from photo_url if needed
+      return clinicInfo.doctors.map((doctor: any) => ({
+        ...doctor,
+        avatar_url: doctor.avatar_url ?? doctor.photo_url ?? undefined,
+      }))
     }
     return defaultDoctors
   }, [clinicInfo?.doctors])
@@ -198,12 +209,11 @@ export default function ClinicPage({ slug, clinicData: clinicInfo }: ClinicPageP
         <main className="max-w-6xl mx-auto px-8 py-12">
           {/* Clinic Header */}
           <div className="text-center mb-12">
-            {clinicInfo.logo_url && (
-              <div className="w-24 h-24 mx-auto mb-6 rounded-2xl overflow-hidden bg-white shadow-md">
-                <img src={clinicInfo.logo_url} alt={clinicInfo.clinic_name} className="w-full h-full object-cover" />
-              </div>
-            )}
-            <h1 className="text-4xl xl:text-5xl font-bold text-gray-900 mb-3">
+            {/* Place clinic logo inline (left of) the clinic name in the header */}
+            <h1 className="text-4xl xl:text-5xl font-bold text-gray-900 mb-3 flex items-center justify-center gap-4">
+              {clinicInfo.logo_url && (
+                <img src={clinicInfo.logo_url} alt={clinicInfo.clinic_name} className="h-16 w-16 rounded-xl object-cover bg-white shadow-md" />
+              )}
               {clinicInfo.clinic_name}
             </h1>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -266,8 +276,8 @@ export default function ClinicPage({ slug, clinicData: clinicInfo }: ClinicPageP
                 {displayDoctors.map((doctor) => (
                   <div key={doctor.id} className="flex items-center gap-4">
                     <div className="w-14 h-14 shrink-0 overflow-hidden rounded-full bg-gray-100">
-                      {doctor.photo_url ? (
-                        <img src={doctor.photo_url} alt={doctor.name} className="w-full h-full object-cover" />
+                      {doctor.avatar_url ? (
+                        <img src={doctor.avatar_url} alt={doctor.name} className="w-full h-full object-cover" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-gray-400">
                           <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -358,8 +368,14 @@ export default function ClinicPage({ slug, clinicData: clinicInfo }: ClinicPageP
               </svg>
             </Link>
           </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">{clinicInfo.clinic_name}</h1>
+          <div className="text-center flex flex-col items-center">
+            {/* Place clinic logo inline with the name for mobile */}
+            <div className="flex items-center gap-3 justify-center mb-2">
+              {clinicInfo.logo_url && (
+                <img src={clinicInfo.logo_url} alt={clinicInfo.clinic_name} className="h-10 w-10 rounded-xl object-cover bg-white shadow-md" />
+              )}
+              <h1 className="text-2xl font-bold text-gray-900 m-0 p-0">{clinicInfo.clinic_name}</h1>
+            </div>
             <p className="mt-2 text-sm text-gray-600">{clinicInfo.tagline}</p>
           </div>
         </div>
@@ -423,8 +439,8 @@ export default function ClinicPage({ slug, clinicData: clinicInfo }: ClinicPageP
               {displayDoctors.map((doctor) => (
                 <div key={doctor.id} className="flex items-center gap-3">
                   <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-gray-200">
-                    {doctor.photo_url ? (
-                      <img src={doctor.photo_url} alt={doctor.name} className="h-full w-full object-cover" />
+                    {doctor.avatar_url ? (
+                      <img src={doctor.avatar_url} alt={doctor.name} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-gray-400">
                         <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
