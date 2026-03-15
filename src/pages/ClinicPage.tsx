@@ -121,11 +121,11 @@ export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: Clini
 
   const getSectionTitle = (sectionId: string): string => {
     const titles: Record<string, string> = {
-      services: 'Our Services',
-      doctors: 'Our Veterinarians',
-      openingHours: 'Opening Hours',
-      gallery: 'Photo Gallery',
-      reviews: 'Reviews'
+      services: i18n.t('clinic.services') || 'Our Services',
+      doctors: i18n.t('clinic.doctors') || 'Our Veterinarians',
+      openingHours: i18n.t('clinic.openingHours') || 'Opening Hours',
+      gallery: i18n.t('clinic.gallery') || 'Photo Gallery',
+      reviews: i18n.t('clinic.reviews') || 'Reviews'
     }
     return titles[sectionId] || 'Section'
   }
@@ -200,7 +200,7 @@ export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: Clini
                     className="hover:opacity-90 text-white font-semibold py-3 px-8 rounded-xl shadow-md transition-all"
                     style={{ backgroundColor: themeColor }}
                   >
-                    Make an Appointment
+                    <span suppressHydrationWarning>{i18n.t('clinic.bookAppointment') || 'Make an Appointment'}</span>
                   </button>
                 )}
               </div>
@@ -267,14 +267,14 @@ export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: Clini
             {/* Opening Hours */}
             {isSectionVisible('openingHours') && (
               <div className="bg-white rounded-2xl p-6 shadow-sm">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Opening Hours</h3>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{formatOpeningHours}</p>
+                <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-4">{i18n.t('clinic.openingHours') || 'Opening Hours'}</h3>
+                <p suppressHydrationWarning className="text-gray-700 leading-relaxed whitespace-pre-line">{formatOpeningHours}</p>
               </div>
             )}
 
             {/* Veterinarians */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Our Veterinarians</h3>
+              <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-4">{i18n.t('clinic.doctors') || 'Our Veterinarians'}</h3>
               <div className="space-y-4">
                 {displayDoctors.map((doctor) => (
                   <div key={doctor.id} className="flex items-center gap-4">
@@ -300,7 +300,7 @@ export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: Clini
 
             {/* Services */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Our Services</h3>
+              <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-4">{i18n.t('clinic.services') || 'Our Services'}</h3>
               <ul className="space-y-2">
                 {displayServices.map((service) => (
                   <li key={service.id} className="flex items-start gap-3 text-gray-700">
@@ -315,7 +315,7 @@ export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: Clini
           {/* Gallery Section */}
           {isSectionVisible('gallery') && clinicInfo.gallery && clinicInfo.gallery.length > 0 && (
             <div className="mt-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Photo Gallery</h3>
+              <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-4">{i18n.t('clinic.gallery') || 'Photo Gallery'}</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {clinicInfo.gallery.slice(0, 4).map((photo, index) => (
                   <div key={photo.id || index} className="aspect-square overflow-hidden rounded-xl bg-gray-100">
@@ -330,12 +330,12 @@ export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: Clini
           {isSectionVisible('reviews') && clinicInfo.reviews && clinicInfo.reviews.length > 0 && (
             <div className="mt-8 bg-white rounded-2xl p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
-                <h3 className="text-xl font-bold text-gray-900">Reviews</h3>
-                <div className="flex items-center gap-1">
+                <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900">{i18n.t('clinic.reviews') || 'Reviews'}</h3>
+                <div suppressHydrationWarning className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <span key={i} className="text-yellow-400 text-lg">⭐</span>
                   ))}
-                  <span className="ml-2 text-gray-600">{calculateAverageRating()} ({clinicInfo.reviews.length} reviews)</span>
+                  <span className="ml-2 text-gray-600">{calculateAverageRating()} ({clinicInfo.reviews.length} {i18n.t('clinic.reviews')?.toLowerCase() || 'reviews'})</span>
                 </div>
               </div>
             </div>
@@ -358,13 +358,14 @@ export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: Clini
         {/* VetCard Header */}
         <div className="bg-white px-6 py-6">
           <div className="flex items-center justify-between mb-4">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href={`/${lang}`} className="flex items-center gap-2">
               <PetsIcon color={themeColor} className="h-8 w-8" />
               <span className="text-base font-bold text-gray-800">VetCard</span>
             </Link>
             <Link
-              href="/my-appointments"
+              href={`/${lang}/my-appointments`}
               className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="My Appointments"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -391,7 +392,7 @@ export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: Clini
               className="w-full rounded-lg py-3 text-base font-semibold text-white shadow-md"
               style={{ backgroundColor: themeColor }}
             >
-              Make an Appointment
+              <span suppressHydrationWarning>{i18n.t('clinic.bookAppointment') || 'Make an Appointment'}</span>
             </button>
           </div>
         )}
@@ -428,16 +429,16 @@ export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: Clini
           {/* Opening Hours */}
           {isSectionVisible('openingHours') && (
             <div className="border-t border-gray-100 py-5">
-              <h3 className="mb-3 text-lg font-bold text-gray-900">Opening Hours</h3>
+              <h3 suppressHydrationWarning className="mb-3 text-lg font-bold text-gray-900">{i18n.t('clinic.openingHours') || 'Opening Hours'}</h3>
               <div className="text-sm text-gray-700">
-                <p className="whitespace-pre-line">{formatOpeningHours}</p>
+                <p suppressHydrationWarning className="whitespace-pre-line">{formatOpeningHours}</p>
               </div>
             </div>
           )}
 
           {/* Doctors */}
           <div className="border-t border-gray-100 py-5">
-            <h3 className="mb-3 text-lg font-bold text-gray-900">Our Veterinarians</h3>
+            <h3 suppressHydrationWarning className="mb-3 text-lg font-bold text-gray-900">{i18n.t('clinic.doctors') || 'Our Veterinarians'}</h3>
             <div className="space-y-3">
               {displayDoctors.map((doctor) => (
                 <div key={doctor.id} className="flex items-center gap-3">
@@ -463,7 +464,7 @@ export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: Clini
 
           {/* Services */}
           <div className="border-t border-gray-100 py-5">
-            <h3 className="mb-3 text-lg font-bold text-gray-900">Our Services</h3>
+            <h3 suppressHydrationWarning className="mb-3 text-lg font-bold text-gray-900">{i18n.t('clinic.services') || 'Our Services'}</h3>
             <div className="space-y-2">
               {displayServices.map((service) => (
                 <div key={service.id} className="flex items-start gap-2 text-sm text-gray-700">
@@ -479,7 +480,7 @@ export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: Clini
             .filter(s => s.id !== 'openingHours' && s.id !== 'doctors' && s.id !== 'services')
             .map((section) => (
               <div key={section.id} className="border-t border-gray-100 py-5">
-                <h3 className="mb-3 text-lg font-bold text-gray-900">{getSectionTitle(section.id)}</h3>
+                <h3 suppressHydrationWarning className="mb-3 text-lg font-bold text-gray-900">{getSectionTitle(section.id)}</h3>
 
                 {section.id === 'gallery' && (
                   <div>
