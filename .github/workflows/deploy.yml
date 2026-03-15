@@ -100,9 +100,18 @@ jobs:
             RELEASE_PATH="${{ matrix.server.path }}/releases/${GITHUB_SHA}"
             ARTIFACT_PATH="${{ matrix.server.path }}/artifacts/${GITHUB_SHA}.tar.gz"
 
+            # Clean old releases first to free up space
+            RELEASES_PATH="${{ matrix.server.path }}/releases"
+            if [ -d "$RELEASES_PATH" ]; then
+              cd "$RELEASES_PATH" && ls -t -1 | tail -n +3 | xargs rm -rf || true
+            fi
+
             mkdir -p "$RELEASE_PATH"
             # Extract without preserving owners/permissions
             tar xzf "$ARTIFACT_PATH" --no-same-owner --no-same-permissions -C "$RELEASE_PATH"
+
+            # Remove artifact immediately after extraction to save space
+            rm -f "$ARTIFACT_PATH"
 
             # Optional: storage directories if Next.js needs caching
             mkdir -p "${{ matrix.server.path }}/storage/logs" || true
@@ -280,8 +289,9 @@ jobs:
           port: ${{ matrix.server.port }}
           envs: RELEASES_PATH,ARTIFACTS_PATH
           script: |
-            cd "$RELEASES_PATH" && ls -t -1 | tail -n +6 | xargs rm -rf || true
-            cd "$ARTIFACTS_PATH" && ls -t -1 | tail -n +6 | xargs rm -rf || true
+            # Keep only the last 3 releases to save space
+            cd "$RELEASES_PATH" && ls -t -1 | tail -n +4 | xargs rm -rf || true
+            cd "$ARTIFACTS_PATH" && ls -t -1 | tail -n +4 | xargs rm -rf || true
 
   delete-artifact:
     name: Delete GitHub artifact
