@@ -94,10 +94,25 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ matrix.server.port }}
           script: |
+            echo "--- Disk space before cleanup ---"
+            df -h
+            
             mkdir -p ${{ matrix.server.path }}/artifacts
             mkdir -p ${{ matrix.server.path }}/releases
-            # Clean old artifacts to free up space before new upload
+            
+            # Clean old artifacts to free up space
             cd ${{ matrix.server.path }}/artifacts && rm -rf *.tar.gz || true
+            
+            # Clean old releases BEFORE upload to ensure space for the archive
+            RELEASES_PATH="${{ matrix.server.path }}/releases"
+            if [ -d "$RELEASES_PATH" ]; then
+              # Keep only the very last release (to allow rollback if needed, but prioritize space)
+              # or just delete everything older than 1
+              cd "$RELEASES_PATH" && ls -t -1 | tail -n +2 | xargs rm -rf || true
+            fi
+            
+            echo "--- Disk space after cleanup ---"
+            df -h
 
       - name: Upload artifact to server
         uses: appleboy/scp-action@v0.1.7
@@ -124,12 +139,6 @@ jobs:
             set -e
             RELEASE_PATH="${{ matrix.server.path }}/releases/${GITHUB_SHA}"
             ARTIFACT_PATH="${{ matrix.server.path }}/artifacts/${GITHUB_SHA}.tar.gz"
-
-            # Clean old releases first to free up space
-            RELEASES_PATH="${{ matrix.server.path }}/releases"
-            if [ -d "$RELEASES_PATH" ]; then
-              cd "$RELEASES_PATH" && ls -t -1 | tail -n +2 | xargs rm -rf || true
-            fi
 
             mkdir -p "$RELEASE_PATH"
             # Extract preserving structure (.next/standalone will be inside)
