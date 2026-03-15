@@ -2,27 +2,11 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import Head from 'next/head'
-import { createAppointment, type ClinicData } from '@/services/clinicApi'
+import { createAppointment, getAvailableSlots, type ClinicData } from '@/services/clinicApi'
 import { saveAppointment } from '@/services/appointmentStorage'
 import { getUserProfile, saveUserProfile } from '@/services/userStorage'
 import PetsIcon from '@/components/PetsIcon'
 import { useTranslation } from 'react-i18next'
-
-interface TimeSlot {
-  time: string
-  available: boolean
-}
-
-const defaultTimeSlots: TimeSlot[] = [
-  { time: '9:00 AM', available: true },
-  { time: '10:00 AM', available: true },
-  { time: '11:00 AM', available: true },
-  { time: '12:00 PM', available: true },
-  { time: '1:00 PM', available: false },
-  { time: '2:00 PM', available: true },
-  { time: '3:00 PM', available: true },
-  { time: '4:00 PM', available: true }
-]
 
 const animalTypes = ['Dog', 'Cat', 'Bird', 'Rabbit', 'Hamster', 'Other']
 const petAgeOptions = ['Puppy/Kitten', 'Young', 'Adult', 'Senior', 'Unknown']
@@ -43,7 +27,8 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
   const [selectedTime, setSelectedTime] = useState<string>('')
-  const [timeSlots] = useState<TimeSlot[]>(defaultTimeSlots)
+  const [timeSlots, setTimeSlots] = useState<Array<{ time: string, available: boolean }>>([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
 
   // Form fields
   const [ownerName, setOwnerName] = useState('')
@@ -81,6 +66,49 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
       i18n.changeLanguage(lang)
     }
   }, [lang, i18n])
+
+  // Fetch available slots when date or branch changes
+  useEffect(() => {
+    async function fetchSlots() {
+      if (!selectedDate || !branchId || !clinicData) return
+
+      try {
+        setLoadingSlots(true)
+        setSelectedTime('') // Reset selected time when date/branch changes
+        
+        const year = selectedDate.getFullYear()
+        const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0')
+        const day = selectedDate.getDate().toString().padStart(2, '0')
+        const formattedDate = `${year}-${month}-${day}`
+        
+        const slots = await getAvailableSlots(clinicData, formattedDate, branchId)
+        
+        // Deduplicate slots by time to avoid visual clutter and key warnings
+        const uniqueSlots = slots.reduce((acc: Array<{time: string, available: boolean}>, current) => {
+          const x = acc.find(item => item.time === current.time)
+          if (!x) {
+            return acc.concat([current])
+          } else {
+            // If we find a duplicate, prefer the one that is 'available' if the existing one isn't
+            if (!x.available && current.available) {
+              x.available = true
+            }
+            return acc
+          }
+        }, [])
+
+        setTimeSlots(uniqueSlots)
+      } catch (error) {
+        console.error('Error in AppointmentPage fetchSlots:', error)
+        // Optionally set an error state here
+        setTimeSlots([])
+      } finally {
+        setLoadingSlots(false)
+      }
+    }
+
+    fetchSlots()
+  }, [selectedDate, branchId, clinicData])
 
   const themeColor = clinicData?.color || '#2563eb'
 
@@ -362,28 +390,42 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
               {/* Time Slots */}
               <div className="mt-8">
                 <h4 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-4">{i18n.t('appointmentPage.labels.time') || 'Select a Time'}</h4>
-                <div className="grid grid-cols-4 gap-3">
-                  {timeSlots.map((slot) => (
-                    <button
-                      key={slot.time}
-                      onClick={() => setSelectedTime(slot.time)}
-                      disabled={!slot.available}
-                      className={`py-3 px-4 rounded-xl font-medium text-base transition-all ${
-                        selectedTime === slot.time && slot.available ? 'shadow-md' : ''
-                      } ${
-                        selectedTime !== slot.time && slot.available ? 'bg-gray-100 text-gray-900 hover:bg-gray-200' : ''
-                      } ${
-                        !slot.available ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''
-                      }`}
-                      style={selectedTime === slot.time && slot.available ? {
-                        backgroundColor: themeColor,
-                        color: 'white'
-                      } : {}}
-                    >
-                      {formatTime(slot.time)}
-                    </button>
-                  ))}
-                </div>
+                
+                {loadingSlots ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: themeColor }}></div>
+                  </div>
+                ) : timeSlots.length > 0 ? (
+                  <div className="grid grid-cols-4 gap-3">
+                    {timeSlots.map((slot) => (
+                      <button
+                        key={slot.time}
+                        onClick={() => setSelectedTime(slot.time)}
+                        disabled={!slot.available}
+                        className={`py-3 px-4 rounded-xl font-medium text-base transition-all ${
+                          selectedTime === slot.time && slot.available ? 'shadow-md' : ''
+                        } ${
+                          selectedTime !== slot.time && slot.available ? 'bg-gray-100 text-gray-900 hover:bg-gray-200' : ''
+                        } ${
+                          !slot.available ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''
+                        }`}
+                        style={selectedTime === slot.time && slot.available ? {
+                          backgroundColor: themeColor,
+                          color: 'white'
+                        } : {}}
+                      >
+                        {formatTime(slot.time)}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div suppressHydrationWarning className="text-center py-8 text-gray-500 bg-gray-50 rounded-xl">
+                    {selectedDate && branchId 
+                      ? (i18n.t('appointmentPage.noSlots') || 'No available slots for this date')
+                      : (i18n.t('appointmentPage.selectDateBranch') || 'Please select a date and branch')
+                    }
+                  </div>
+                )}
               </div>
             </div>
 
@@ -653,29 +695,43 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
           {/* Time Slots */}
           <div>
             <h3 className="text-2xl font-bold text-gray-900 mb-4">Select a Time</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {timeSlots.map((slot) => (
-                <button
-                  key={slot.time}
-                  onClick={() => setSelectedTime(slot.time)}
-                  disabled={!slot.available}
-                  className={`py-4 px-6 rounded-xl font-semibold text-lg transition-all ${
-                    selectedTime === slot.time && slot.available ? 'shadow-md' : ''
-                  } ${
-                    selectedTime !== slot.time && slot.available ? 'bg-white text-gray-900 border-2 border-gray-200' : ''
-                  } ${
-                    !slot.available ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
-                  }`}
-                  style={selectedTime === slot.time && slot.available ? {
-                    backgroundColor: themeColor,
-                    color: 'white',
-                    borderColor: 'transparent'
-                  } : {}}
-                >
-                  {formatTime(slot.time)}
-                </button>
-              ))}
-            </div>
+            
+            {loadingSlots ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: themeColor }}></div>
+              </div>
+            ) : timeSlots.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3">
+                {timeSlots.map((slot) => (
+                  <button
+                    key={slot.time}
+                    onClick={() => setSelectedTime(slot.time)}
+                    disabled={!slot.available}
+                    className={`py-4 px-6 rounded-xl font-semibold text-lg transition-all ${
+                      selectedTime === slot.time && slot.available ? 'shadow-md' : ''
+                    } ${
+                      selectedTime !== slot.time && slot.available ? 'bg-white text-gray-900 border-2 border-gray-200' : ''
+                    } ${
+                      !slot.available ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+                    }`}
+                    style={selectedTime === slot.time && slot.available ? {
+                      backgroundColor: themeColor,
+                      color: 'white',
+                      borderColor: 'transparent'
+                    } : {}}
+                  >
+                    {formatTime(slot.time)}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div suppressHydrationWarning className="text-center py-8 text-gray-500 bg-white border-2 border-gray-100 rounded-xl">
+                {selectedDate && branchId 
+                  ? (i18n.t('appointmentPage.noSlots') || 'No available slots for this date')
+                  : (i18n.t('appointmentPage.selectDateBranch') || 'Please select a date and branch')
+                }
+              </div>
+            )}
           </div>
 
           {/* Branch Selection */}

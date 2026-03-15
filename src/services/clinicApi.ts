@@ -213,3 +213,28 @@ export async function createAppointment(clinicData: ClinicData, data: Appointmen
     throw error
   }
 }
+// Get available slots for a specific date and branch
+export async function getAvailableSlots(clinicData: ClinicData, date: string, branchId: number): Promise<Array<{ time: string, available: boolean }>> {
+  const tenantDomain = getTenantDomainFromClinic(clinicData)
+  const baseUrl = tenantDomain.startsWith('http') ? tenantDomain : `https://${tenantDomain}`
+  const url = `${baseUrl}/api/appointments/public-available-slots?date=${date}&branch_id=${branchId}`
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'X-Frontend-Key': frontendKey,
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch slots: ${response.status}`)
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('Error fetching available slots:', error)
+    throw error
+  }
+}

@@ -102,6 +102,8 @@
       "submitFailed": "Failed to submit appointment. Please try again."
     },
     "submitting": "Submitting...",
-    "submit": "Book Appointment"
+    "submit": "Book Appointment",
+    "selectDateBranch": "Please select a date and branch",
+    "noSlots": "No available slots for this date"
   }
 }
