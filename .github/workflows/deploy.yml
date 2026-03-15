@@ -52,7 +52,7 @@ jobs:
           cp -r public .next/standalone/
           
           # Archive the standalone directory
-          tar -czf "${GITHUB_SHA}".tar.gz -C .next/standalone . --exclude=node_modules
+          tar -czf "${GITHUB_SHA}".tar.gz --exclude=node_modules -C .next/standalone .
           
           # Also include package.json and env for the server if needed (though standalone usually has what it needs)
           # Note: Next standalone puts the entry point at server.js
