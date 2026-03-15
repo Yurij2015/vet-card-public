@@ -61,6 +61,31 @@
     "catalogTitle": "Veterinary Clinics Catalog | VetCard",
     "catalogDescription": "Find the best veterinary clinic for your pet. Catalog of vet clinics with contacts, services, and online booking.",
     "catalogKeywords": "veterinary clinic, vet clinic, veterinarian, clinic catalog, veterinary services"
+  },
+  "appointmentPage": {
+    "title": "Book an Appointment",
+    "description": "Fill out the form to book an appointment at this clinic.",
+    "labels": {
+      "date": "Date",
+      "time": "Time",
+      "petName": "Pet's Name",
+      "animalType": "Animal Type",
+      "petAge": "Pet Age",
+      "ownerName": "Owner's Name",
+      "ownerEmail": "Owner's Email",
+      "ownerPhone": "Owner's Phone"
+    },
+    "errors": {
+      "dateRequired": "Date is required.",
+      "timeRequired": "Time is required.",
+      "petNameRequired": "Pet's name is required.",
+      "ownerNameRequired": "Owner's name is required.",
+      "ownerEmailRequired": "Owner's email is required.",
+      "ownerPhoneRequired": "Owner's phone is required.",
+      "submitFailed": "Failed to submit appointment. Please try again."
+    },
+    "submitting": "Submitting...",
+    "submit": "Book Appointment",
+    "backToHome": "Back to Home"
   }
 }
-

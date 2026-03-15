@@ -6,6 +6,7 @@ import { createAppointment, type ClinicData } from '@/services/clinicApi'
 import { saveAppointment } from '@/services/appointmentStorage'
 import { getUserProfile, saveUserProfile } from '@/services/userStorage'
 import PetsIcon from '@/components/PetsIcon'
+import { useTranslation } from 'react-i18next'
 
 interface TimeSlot {
   time: string
@@ -26,13 +27,15 @@ const defaultTimeSlots: TimeSlot[] = [
 const animalTypes = ['Dog', 'Cat', 'Bird', 'Rabbit', 'Hamster', 'Other']
 const petAgeOptions = ['Puppy/Kitten', 'Young', 'Adult', 'Senior', 'Unknown']
 
-interface AppointmentPageProps {
+export interface AppointmentPageProps {
+  lang: string
   slug: string
   clinicData: ClinicData
 }
 
-export default function AppointmentPage({ slug, clinicData }: AppointmentPageProps) {
+export default function AppointmentPage({ lang, slug, clinicData }: AppointmentPageProps) {
   const router = useRouter()
+  const { i18n } = useTranslation()
 
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -71,6 +74,13 @@ export default function AppointmentPage({ slug, clinicData }: AppointmentPagePro
       setBranchId(clinicData.branches[0].id)
     }
   }, [clinicData])
+
+  // Set i18n language on mount for SSR/SSG hydration consistency
+  useEffect(() => {
+    if (i18n.language !== lang) {
+      i18n.changeLanguage(lang)
+    }
+  }, [lang, i18n])
 
   const themeColor = clinicData?.color || '#2563eb'
 

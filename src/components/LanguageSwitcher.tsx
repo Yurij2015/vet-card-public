@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useRouter } from 'next/router'
 
 const languages = [
   { code: 'uk', label: 'UA', flag: '🇺🇦' },
@@ -7,11 +8,24 @@ const languages = [
 
 export default function LanguageSwitcher() {
   const { i18n } = useTranslation()
+  const router = useRouter()
 
   const currentLang = i18n.language?.split('-')[0] || 'uk'
 
   const handleLanguageChange = (langCode: string) => {
+    if (langCode === currentLang) return
     i18n.changeLanguage(langCode)
+    // Replace the first segment of the path with the new lang
+    const asPath = router.asPath || '/'
+    const pathParts = asPath.split('/')
+    // pathParts[0] is '', pathParts[1] is lang
+    if (pathParts.length > 1 && (pathParts[1] === 'uk' || pathParts[1] === 'en')) {
+      pathParts[1] = langCode
+    } else {
+      pathParts.splice(1, 0, langCode)
+    }
+    const newPath = pathParts.join('/') || '/'
+    router.push(newPath)
   }
 
   return (

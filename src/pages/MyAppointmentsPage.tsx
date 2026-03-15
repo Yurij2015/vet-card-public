@@ -12,8 +12,18 @@ import {
 import PetsIcon from '@/components/PetsIcon'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 
-export default function MyAppointmentsPage() {
-  const { t } = useTranslation()
+interface MyAppointmentsPageProps {
+  lang: string
+}
+
+export default function MyAppointmentsPage({ lang }: MyAppointmentsPageProps) {
+  const { t, i18n } = useTranslation()
+  useEffect(() => {
+    if (i18n.language !== lang) {
+      i18n.changeLanguage(lang)
+    }
+  }, [lang, i18n])
+
   const [appointments, setAppointments] = useState<SavedAppointment[]>([])
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'past'>('all')
 
@@ -53,7 +63,7 @@ export default function MyAppointmentsPage() {
       <header className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3">
+             <Link href={`/${lang}`} className="flex items-center gap-3">
               <PetsIcon color="#2563eb" className="h-8 w-8" />
               <span className="text-2xl font-bold text-gray-900">VetCard</span>
             </Link>
@@ -125,10 +135,10 @@ export default function MyAppointmentsPage() {
                   : t('myAppointments.noPast')
               }
             </p>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
-            >
+             <Link
+               href={`/${lang}`}
+               className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+             >
               {t('myAppointments.browseClinics')}
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
@@ -153,10 +163,10 @@ export default function MyAppointmentsPage() {
                       {/* Main Info */}
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <Link
-                            href={`/${apt.clinic_slug}`}
-                            className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
-                          >
+                           <Link
+                             href={`/${lang}/${apt.clinic_slug}`}
+                             className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
+                           >
                             {apt.clinic_name}
                           </Link>
                           {isPast && (
@@ -206,10 +216,10 @@ export default function MyAppointmentsPage() {
 
                       {/* Actions */}
                       <div className="flex sm:flex-col gap-2">
-                        <Link
-                          href={`/${apt.clinic_slug}`}
-                          className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors text-center"
-                        >
+                         <Link
+                           href={`/${lang}/${apt.clinic_slug}`}
+                           className="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors text-center"
+                         >
                           {t('myAppointments.viewClinic')}
                         </Link>
                         <button
@@ -229,10 +239,10 @@ export default function MyAppointmentsPage() {
 
         {/* Back to Catalog */}
         <div className="mt-8 text-center">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-          >
+           <Link
+             href={`/${lang}`}
+             className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
             </svg>

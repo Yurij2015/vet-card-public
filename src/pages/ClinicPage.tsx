@@ -1,9 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import Head from 'next/head'
 import { type ClinicData } from '@/services/clinicApi'
 import PetsIcon from '@/components/PetsIcon'
+import { useTranslation } from 'react-i18next'
 
 const defaultServices = [
   { id: 1, name: 'Wellness Exams' },
@@ -20,6 +21,7 @@ const defaultDoctors = [
 ]
 
 interface ClinicPageProps {
+  lang: string
   slug: string
   clinicData: ClinicData
 }
@@ -31,8 +33,15 @@ interface DisplayDoctor {
   avatar_url?: string;
 }
 
-export default function ClinicPage({ slug, clinicData: clinicInfo }: ClinicPageProps) {
+export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: ClinicPageProps) {
   const router = useRouter()
+  const { i18n } = useTranslation()
+
+  useEffect(() => {
+    if (i18n.language !== lang) {
+      i18n.changeLanguage(lang)
+    }
+  }, [lang, i18n])
 
   const seoTitle = clinicInfo?.seo?.title || (clinicInfo ? `${clinicInfo.clinic_name} | VetCard` : 'VetCard')
   const seoDescription = clinicInfo?.seo?.description || clinicInfo?.tagline || (clinicInfo ? `${clinicInfo.clinic_name} - Veterinary Clinic` : 'Veterinary Clinic')
@@ -128,7 +137,7 @@ export default function ClinicPage({ slug, clinicData: clinicInfo }: ClinicPageP
   }
 
   const makeAppointment = () => {
-    router.push(`/${slug}/appointment`)
+    router.push(`/${lang}/${slug}/appointment`)
   }
 
   const openMaps = () => {
@@ -177,13 +186,13 @@ export default function ClinicPage({ slug, clinicData: clinicInfo }: ClinicPageP
         <header className="bg-white shadow-sm">
           <div className="max-w-6xl mx-auto px-8 py-6">
             <div className="flex items-center justify-between">
-              <Link href="/" className="flex items-center gap-3">
+              <Link href={`/${lang}`} className="flex items-center gap-3">
                 <PetsIcon color={themeColor} className="h-8 w-8" />
                 <span className="text-2xl font-bold text-gray-900">VetCard</span>
               </Link>
               <div className="flex items-center gap-4">
                 <Link
-                  href="/my-appointments"
+                  href={`/${lang}/my-appointments`}
                   className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                   title="My Appointments"
                 >
