@@ -78,9 +78,26 @@ jobs:
       matrix:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download artifact
+        uses: actions/download-artifact@v4
         with:
           name: app-build
+
+      - name: Verify artifact presence
+        run: ls -la ${{ github.sha }}.tar.gz
+
+      - name: Pre-upload cleanup and directory creation
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ matrix.server.ip }}
+          username: ${{ matrix.server.username }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ matrix.server.port }}
+          script: |
+            mkdir -p ${{ matrix.server.path }}/artifacts
+            mkdir -p ${{ matrix.server.path }}/releases
+            # Clean old artifacts to free up space before new upload
+            cd ${{ matrix.server.path }}/artifacts && rm -rf *.tar.gz || true
 
       - name: Upload artifact to server
         uses: appleboy/scp-action@v0.1.7
@@ -90,7 +107,8 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ matrix.server.port }}
           source: ${{ github.sha }}.tar.gz
-          target: ${{ matrix.server.path }}/artifacts
+          target: ${{ matrix.server.path }}/artifacts/
+          debug: true
 
       - name: Extract archive and create directories on server
         uses: appleboy/ssh-action@v1.0.3
