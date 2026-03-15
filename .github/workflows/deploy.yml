@@ -47,15 +47,12 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
         run: |
           # Package Next.js standalone build for Node server deploy.
-          # We need to copy static assets into standalone folder before packaging
+          # cp static assets into standalone folder
           cp -r .next/static .next/standalone/.next/
           cp -r public .next/standalone/
           
-          # Archive the standalone directory
-          tar -czf "${GITHUB_SHA}".tar.gz --exclude=node_modules -C .next/standalone .
-          
-          # Also include package.json and env for the server if needed (though standalone usually has what it needs)
-          # Note: Next standalone puts the entry point at server.js
+          # Archive the .next/standalone directory as a whole to preserve structure
+          tar -czf "${GITHUB_SHA}".tar.gz .next/standalone
           
       - name: Store artifact for distribution
         uses: actions/upload-artifact@v4
@@ -113,11 +110,11 @@ jobs:
             # Clean old releases first to free up space
             RELEASES_PATH="${{ matrix.server.path }}/releases"
             if [ -d "$RELEASES_PATH" ]; then
-              cd "$RELEASES_PATH" && ls -t -1 | tail -n +3 | xargs rm -rf || true
+              cd "$RELEASES_PATH" && ls -t -1 | tail -n +2 | xargs rm -rf || true
             fi
 
             mkdir -p "$RELEASE_PATH"
-            # Extract without preserving owners/permissions
+            # Extract preserving structure (.next/standalone will be inside)
             tar xzf "$ARTIFACT_PATH" --no-same-owner --no-same-permissions -C "$RELEASE_PATH"
 
             # Remove artifact immediately after extraction to save space
@@ -154,26 +151,6 @@ jobs:
             if ! command -v node >/dev/null 2>&1; then
               curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
               sudo apt-get install -y nodejs
-            fi
-
-      - name: Install production dependencies on server
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          GITHUB_SHA: ${{ github.sha }}
-        with:
-          host: ${{ matrix.server.ip }}
-          username: ${{ matrix.server.username }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ matrix.server.port }}
-          envs: GITHUB_SHA
-          script: |
-            set -e
-            RELEASE_PATH="${{ matrix.server.path }}/releases/${GITHUB_SHA}"
-            cd "$RELEASE_PATH"
-            if [ -f package-lock.json ]; then
-              npm ci --omit=dev
-            else
-              npm install --omit=dev
             fi
 
   run-before-hooks:
