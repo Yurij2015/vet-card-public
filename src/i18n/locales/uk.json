@@ -65,15 +65,32 @@
   "appointmentPage": {
     "title": "Запис на прийом",
     "description": "Заповніть форму для запису на прийом у цю клініку.",
+    "backToHome": "Назад на головну",
+    "backToClinic": "Назад до клініки",
+    "userInfo": "Ваша інформація",
+    "myAppointments": "Мої записи",
+    "summary": "Резюме запису",
+    "success": "Запис успішно підтверджено!",
+    "placeholders": {
+      "ownerName": "Введіть ім'я власника",
+      "petName": "Введіть ім'я тварини",
+      "selectAnimalType": "Оберіть вид тварини",
+      "selectPetAge": "Оберіть вік тварини",
+      "ownerPhone": "Введіть ваш телефон",
+      "ownerEmail": "Введіть ваш email",
+      "serviceReason": "Введіть причину візиту"
+    },
     "labels": {
       "date": "Дата",
       "time": "Час",
+      "branch": "Оберіть філію",
       "petName": "Ім'я тварини",
       "animalType": "Вид тварини",
       "petAge": "Вік тварини",
       "ownerName": "Ім'я власника",
       "ownerEmail": "Email власника",
-      "ownerPhone": "Телефон власника"
+      "ownerPhone": "Телефон власника",
+      "serviceReason": "Причина візиту"
     },
     "errors": {
       "dateRequired": "Дата обов'язкова.",
@@ -85,7 +102,6 @@
       "submitFailed": "Не вдалося записатися. Спробуйте ще раз."
     },
     "submitting": "Відправка...",
-    "submit": "Записатися",
-    "backToHome": "Назад на головну"
+    "submit": "Записатися"
   }
 }

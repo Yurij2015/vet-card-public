@@ -14,13 +14,6 @@ interface CatalogPageProps {
 export default function CatalogPage({ clinics, lang }: CatalogPageProps) {
   const { i18n, t } = useTranslation()
 
-  // Set language on mount if different
-  useEffect(() => {
-    if (i18n.language !== lang) {
-      i18n.changeLanguage(lang)
-    }
-  }, [lang, i18n])
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>

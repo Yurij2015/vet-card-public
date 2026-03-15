@@ -85,8 +85,8 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
   const themeColor = clinicData?.color || '#2563eb'
 
   const monthName = useMemo(() => {
-    return currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  }, [currentMonth])
+    return currentMonth.toLocaleDateString(lang === 'uk' ? 'uk-UA' : 'en-US', { month: 'long', year: 'numeric' })
+  }, [currentMonth, lang])
 
   const calendarDays = useMemo(() => {
     const year = currentMonth.getFullYear()
@@ -107,9 +107,18 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
     return days
   }, [currentMonth])
 
-  const isDateSelected = (date: Date | null) => {
-    if (!date || !selectedDate) return false
-    return date.toDateString() === selectedDate.toDateString()
+  const isDateSelected = (date: Date) => {
+    return selectedDate && date.toDateString() === selectedDate.toDateString()
+  }
+
+  const formatTime = (time: string) => {
+    if (lang !== 'uk') return time
+    const [t, meridiem] = time.split(' ')
+    let [h, m] = t.split(':')
+    let hour = parseInt(h, 10)
+    if (meridiem === 'PM' && hour < 12) hour += 12
+    if (meridiem === 'AM' && hour === 12) hour = 0
+    return `${hour.toString().padStart(2, '0')}:${m}`
   }
 
   const isToday = (date: Date | null) => {
@@ -240,10 +249,10 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
-        <title>Book Appointment | {clinicData?.clinic_name || 'VetCard'}</title>
-        <meta name="description" content={`Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`} />
-        <meta property="og:title" content={`Book Appointment | ${clinicData?.clinic_name || 'VetCard'}`} />
-        <meta property="og:description" content={`Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`} />
+        <title>{i18n.t('appointmentPage.title')} | {clinicData?.clinic_name || 'VetCard'}</title>
+        <meta name="description" content={i18n.t('appointmentPage.description')} />
+        <meta property="og:title" content={`${i18n.t('appointmentPage.title')} | ${clinicData?.clinic_name || 'VetCard'}`} />
+        <meta property="og:description" content={i18n.t('appointmentPage.description')} />
         <meta property="og:type" content="website" />
         <meta property="og:image" content={clinicData?.seo?.og_image || clinicData?.logo_url || undefined} />
         <meta name="robots" content="noindex" />
@@ -255,15 +264,16 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
         <header className="bg-white shadow-sm">
           <div className="max-w-6xl mx-auto px-8 py-6">
             <div className="flex items-center justify-between">
-              <Link href="/" className="flex items-center gap-3">
+              <Link href={`/${lang}`} className="flex items-center gap-3">
                 <PetsIcon color={themeColor} className="h-8 w-8" />
                 <span className="text-2xl font-bold text-gray-900">VetCard</span>
               </Link>
               <div className="flex items-center gap-4">
                 <Link
-                  href="/my-appointments"
+                  suppressHydrationWarning
+                  href={`/${lang}/my-appointments`}
                   className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="My Appointments"
+                  title={i18n.t('appointmentPage.myAppointments') || 'My Appointments'}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -276,7 +286,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
                   </svg>
-                  <span className="font-medium">Back to Clinic</span>
+                  <span suppressHydrationWarning className="font-medium">{i18n.t('appointmentPage.backToClinic') || 'Back to Clinic'}</span>
                 </button>
               </div>
             </div>
@@ -287,8 +297,8 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
         <main className="max-w-6xl mx-auto px-8 py-12">
           {/* Page Title */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl xl:text-5xl font-bold text-gray-900 mb-3">
-              Make an Appointment
+            <h1 suppressHydrationWarning className="text-4xl xl:text-5xl font-bold text-gray-900 mb-3">
+              {i18n.t('appointmentPage.title')}
             </h1>
             {clinicData && (
               <p className="text-xl text-gray-600">
@@ -317,7 +327,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
 
               {/* Weekday Headers */}
               <div className="grid grid-cols-7 gap-2 mb-4">
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+                {(lang === 'uk' ? ['Н', 'П', 'В', 'С', 'Ч', 'П', 'С'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).map((day, index) => (
                   <div key={index} className="text-center text-sm font-semibold text-gray-600">
                     {day}
                   </div>
@@ -351,7 +361,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
 
               {/* Time Slots */}
               <div className="mt-8">
-                <h4 className="text-xl font-bold text-gray-900 mb-4">Select a Time</h4>
+                <h4 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-4">{i18n.t('appointmentPage.labels.time') || 'Select a Time'}</h4>
                 <div className="grid grid-cols-4 gap-3">
                   {timeSlots.map((slot) => (
                     <button
@@ -370,7 +380,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                         color: 'white'
                       } : {}}
                     >
-                      {slot.time}
+                      {formatTime(slot.time)}
                     </button>
                   ))}
                 </div>
@@ -382,7 +392,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
               {/* Branch Selection */}
               {clinicData?.branches && clinicData.branches.length > 1 && (
                 <div className="bg-white rounded-2xl p-8 shadow-sm">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6">Select Branch</h3>
+                  <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-6">{i18n.t('appointmentPage.labels.branch') || 'Select Branch'}</h3>
                   <div className="space-y-3">
                     {clinicData.branches.map((branch) => (
                       <button
@@ -404,15 +414,15 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
               )}
 
               <div className="bg-white rounded-2xl p-8 shadow-sm">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Your Information</h3>
+                <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-6">{i18n.t('appointmentPage.userInfo') || 'Your Information'}</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Owner's Name</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.ownerName')}</label>
                     <input
                       value={ownerName}
                       onChange={(e) => setOwnerName(e.target.value)}
                       type="text"
-                      placeholder="Enter owner's name"
+                      placeholder={i18n.t('appointmentPage.placeholders.ownerName') || "Enter owner's name"}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                       style={{ borderColor: ownerName ? themeColor : '' }}
                       onFocus={(e) => e.target.style.borderColor = themeColor}
@@ -420,12 +430,12 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pet's Name</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.petName')}</label>
                     <input
                       value={petName}
                       onChange={(e) => setPetName(e.target.value)}
                       type="text"
-                      placeholder="Enter pet's name"
+                      placeholder={i18n.t('appointmentPage.placeholders.petName') || "Enter pet's name"}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                       style={{ borderColor: petName ? themeColor : '' }}
                       onFocus={(e) => e.target.style.borderColor = themeColor}
@@ -433,7 +443,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Animal Type</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.animalType')}</label>
                     <select
                       value={animalType}
                       onChange={(e) => setAnimalType(e.target.value)}
@@ -442,14 +452,14 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                       onFocus={(e) => e.target.style.borderColor = themeColor}
                       onBlur={(e) => { if (!animalType) e.target.style.borderColor = '' }}
                     >
-                      <option value="">Select animal type</option>
+                      <option value="">{i18n.t('appointmentPage.placeholders.selectAnimalType') || 'Select animal type'}</option>
                       {animalTypes.map((type) => (
                         <option key={type} value={type}>{type}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pet Age</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.petAge')}</label>
                     <select
                       value={petAge}
                       onChange={(e) => setPetAge(e.target.value)}
@@ -458,19 +468,19 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                       onFocus={(e) => e.target.style.borderColor = themeColor}
                       onBlur={(e) => { if (!petAge) e.target.style.borderColor = '' }}
                     >
-                      <option value="">Select pet age</option>
+                      <option value="">{i18n.t('appointmentPage.placeholders.selectPetAge') || 'Select pet age'}</option>
                       {petAgeOptions.map((age) => (
                         <option key={age} value={age}>{age}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.ownerPhone')}</label>
                     <input
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       type="tel"
-                      placeholder="Enter your phone"
+                      placeholder={i18n.t('appointmentPage.placeholders.ownerPhone') || "Enter your phone"}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                       style={{ borderColor: phone ? themeColor : '' }}
                       onFocus={(e) => e.target.style.borderColor = themeColor}
@@ -478,12 +488,12 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.ownerEmail')}</label>
                     <input
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder={i18n.t('appointmentPage.placeholders.ownerEmail') || "Enter your email"}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                       style={{ borderColor: email ? themeColor : '' }}
                       onFocus={(e) => e.target.style.borderColor = themeColor}
@@ -491,11 +501,11 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Reason for Visit</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.serviceReason') || 'Reason for Visit'}</label>
                     <textarea
                       value={serviceReason}
                       onChange={(e) => setServiceReason(e.target.value)}
-                      placeholder="Enter the reason for your visit"
+                      placeholder={i18n.t('appointmentPage.placeholders.serviceReason') || "Enter the reason for your visit"}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                       style={{ borderColor: serviceReason ? themeColor : '' }}
                       onFocus={(e) => e.target.style.borderColor = themeColor}
@@ -508,13 +518,13 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
               {/* Summary */}
               {(selectedDate || selectedTime) && (
                 <div className="bg-white rounded-2xl p-8 shadow-sm">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Appointment Summary</h3>
+                  <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-4">{i18n.t('appointmentPage.summary') || 'Appointment Summary'}</h3>
                   <div className="space-y-2 text-gray-700">
                     {selectedDate && (
-                      <p><span className="font-medium">Date:</span> {selectedDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                      <p><span className="font-medium">{i18n.t('appointmentPage.labels.date')}:</span> {selectedDate.toLocaleDateString(lang === 'uk' ? 'uk-UA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     )}
                     {selectedTime && (
-                      <p><span className="font-medium">Time:</span> {selectedTime}</p>
+                      <p><span className="font-medium">{i18n.t('appointmentPage.labels.time')}:</span> {selectedTime}</p>
                     )}
                   </div>
                 </div>
@@ -527,7 +537,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                 style={{ backgroundColor: themeColor }}
                 disabled={submitting}
               >
-                {submitting ? 'Confirming...' : 'Confirm Appointment'}
+                {submitting ? i18n.t('appointmentPage.submitting') : i18n.t('appointmentPage.submit')}
               </button>
 
               {/* Submit Error Message */}
@@ -540,7 +550,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
               {/* Submit Success Message */}
               {submitSuccess && (
                 <div className="text-green-600 text-center text-sm font-medium">
-                  Appointment confirmed successfully!
+                  {i18n.t('appointmentPage.success') || 'Appointment confirmed successfully!'}
                 </div>
               )}
             </div>
@@ -570,7 +580,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
                   </svg>
                 </button>
-                <h1 className="text-xl font-bold text-gray-900">Make an Appointment</h1>
+                <h1 suppressHydrationWarning className="text-xl font-bold text-gray-900">{i18n.t('appointmentPage.title')}</h1>
               </div>
               <Link
                 href="/my-appointments"
@@ -605,8 +615,8 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
             {/* Calendar Grid */}
             <div className="bg-white rounded-xl p-4 shadow-sm">
               {/* Weekday Headers */}
-              <div className="grid grid-cols-7 gap-2 mb-4">
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+              <div suppressHydrationWarning className="grid grid-cols-7 gap-2 mb-4">
+                {(lang === 'uk' ? ['Н', 'П', 'В', 'С', 'Ч', 'П', 'С'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).map((day, index) => (
                   <div key={index} className="text-center text-sm font-semibold text-gray-600">
                     {day}
                   </div>
@@ -662,7 +672,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
                     borderColor: 'transparent'
                   } : {}}
                 >
-                  {slot.time}
+                  {formatTime(slot.time)}
                 </button>
               ))}
             </div>
@@ -775,7 +785,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
             style={{ backgroundColor: themeColor }}
             disabled={submitting}
           >
-            {submitting ? 'Confirming...' : 'Confirm Appointment'}
+            {submitting ? i18n.t('appointmentPage.submitting') : i18n.t('appointmentPage.submit')}
           </button>
 
           {/* Submit Error Message */}

@@ -37,12 +37,6 @@ export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: Clini
   const router = useRouter()
   const { i18n } = useTranslation()
 
-  useEffect(() => {
-    if (i18n.language !== lang) {
-      i18n.changeLanguage(lang)
-    }
-  }, [lang, i18n])
-
   const seoTitle = clinicInfo?.seo?.title || (clinicInfo ? `${clinicInfo.clinic_name} | VetCard` : 'VetCard')
   const seoDescription = clinicInfo?.seo?.description || clinicInfo?.tagline || (clinicInfo ? `${clinicInfo.clinic_name} - Veterinary Clinic` : 'Veterinary Clinic')
   const seoImage = clinicInfo?.seo?.og_image || clinicInfo?.logo_url || undefined

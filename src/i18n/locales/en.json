@@ -65,15 +65,32 @@
   "appointmentPage": {
     "title": "Book an Appointment",
     "description": "Fill out the form to book an appointment at this clinic.",
+    "backToHome": "Back to Home",
+    "backToClinic": "Back to Clinic",
+    "userInfo": "Your Information",
+    "myAppointments": "My Appointments",
+    "summary": "Appointment Summary",
+    "success": "Appointment confirmed successfully!",
+    "placeholders": {
+      "ownerName": "Enter owner's name",
+      "petName": "Enter pet's name",
+      "selectAnimalType": "Select animal type",
+      "selectPetAge": "Select pet age",
+      "ownerPhone": "Enter your phone",
+      "ownerEmail": "Enter your email",
+      "serviceReason": "Enter the reason for your visit"
+    },
     "labels": {
       "date": "Date",
       "time": "Time",
+      "branch": "Select Branch",
       "petName": "Pet's Name",
       "animalType": "Animal Type",
       "petAge": "Pet Age",
       "ownerName": "Owner's Name",
       "ownerEmail": "Owner's Email",
-      "ownerPhone": "Owner's Phone"
+      "ownerPhone": "Owner's Phone",
+      "serviceReason": "Reason for Visit"
     },
     "errors": {
       "dateRequired": "Date is required.",
@@ -85,7 +102,6 @@
       "submitFailed": "Failed to submit appointment. Please try again."
     },
     "submitting": "Submitting...",
-    "submit": "Book Appointment",
-    "backToHome": "Back to Home"
+    "submit": "Book Appointment"
   }
 }

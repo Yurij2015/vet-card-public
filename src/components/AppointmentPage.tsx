@@ -160,7 +160,7 @@ export default function AppointmentPage({ lang, slug, clinicData }: AppointmentP
         <title>{i18n.t('appointmentPage.title')}</title>
         <meta name="description" content={i18n.t('appointmentPage.description')} />
       </Head>
-      <h1>{i18n.t('appointmentPage.title')}</h1>
+      <h1 suppressHydrationWarning>{i18n.t('appointmentPage.title')}</h1>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="date">{i18n.t('appointmentPage.labels.date')}</label>

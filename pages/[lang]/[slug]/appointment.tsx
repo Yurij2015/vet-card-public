@@ -1,5 +1,5 @@
 import type { GetStaticPaths, GetStaticProps } from 'next'
-import AppointmentPage, { AppointmentPageProps } from '@/components/AppointmentPage'
+import AppointmentPage, { AppointmentPageProps } from '@/pages/AppointmentPage'
 import type { ClinicData } from '@/services/clinicApi'
 
 type Props = AppointmentPageProps;
