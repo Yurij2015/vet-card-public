@@ -46,10 +46,17 @@ jobs:
         env:
           GITHUB_SHA: ${{ github.sha }}
         run: |
-          # Package Next.js output (.next and out) for server deploy.
-          tar -czf "${GITHUB_SHA}".tar.gz --exclude=.git --exclude=node_modules .next out public package.json package-lock.json .env.production --ignore-failed-read || true
-          rm -f .env.production || true
-
+          # Package Next.js standalone build for Node server deploy.
+          # We need to copy static assets into standalone folder before packaging
+          cp -r .next/static .next/standalone/.next/
+          cp -r public .next/standalone/
+          
+          # Archive the standalone directory
+          tar -czf "${GITHUB_SHA}".tar.gz -C .next/standalone . --exclude=node_modules
+          
+          # Also include package.json and env for the server if needed (though standalone usually has what it needs)
+          # Note: Next standalone puts the entry point at server.js
+          
       - name: Store artifact for distribution
         uses: actions/upload-artifact@v4
         with:
