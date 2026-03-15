@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useDocumentMeta } from '@/hooks/useDocumentMeta'
-import { fetchClinicBySlug, type ClinicData } from '@/services/clinicApi'
+import { useMemo, useEffect } from 'react'
+import { useRouter } from 'next/router'
+import Link from 'next/link'
+import Head from 'next/head'
+import { type ClinicData } from '@/services/clinicApi'
 import PetsIcon from '@/components/PetsIcon'
+import { useTranslation } from 'react-i18next'
 
 const defaultServices = [
   { id: 1, name: 'Wellness Exams' },
@@ -14,58 +16,31 @@ const defaultServices = [
 ]
 
 const defaultDoctors = [
-  { id: 1, name: 'Dr. Stacy Moreno', specialization: 'Veterinarian', photo_url: undefined },
-  { id: 2, name: 'Dr. Edward Curtis', specialization: 'Veterinarian', photo_url: undefined }
+  { id: 1, name: 'Dr. Stacy Moreno', specialization: 'Veterinarian', avatar_url: undefined },
+  { id: 2, name: 'Dr. Edward Curtis', specialization: 'Veterinarian', avatar_url: undefined }
 ]
 
-export default function ClinicPage() {
-  const { slug } = useParams<{ slug: string }>()
-  const navigate = useNavigate()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [clinicInfo, setClinicInfo] = useState<ClinicData | null>(null)
+interface ClinicPageProps {
+  lang: string
+  slug: string
+  clinicData: ClinicData
+}
 
-  // Set document meta tags for SEO - use API SEO data if available
+interface DisplayDoctor {
+  id: number;
+  name: string;
+  specialization: string;
+  avatar_url?: string;
+}
+
+export default function ClinicPage({ lang, slug, clinicData: clinicInfo }: ClinicPageProps) {
+  const router = useRouter()
+  const { i18n } = useTranslation()
+
   const seoTitle = clinicInfo?.seo?.title || (clinicInfo ? `${clinicInfo.clinic_name} | VetCard` : 'VetCard')
   const seoDescription = clinicInfo?.seo?.description || clinicInfo?.tagline || (clinicInfo ? `${clinicInfo.clinic_name} - Veterinary Clinic` : 'Veterinary Clinic')
   const seoImage = clinicInfo?.seo?.og_image || clinicInfo?.logo_url || undefined
 
-  useDocumentMeta({
-    title: seoTitle,
-    description: seoDescription,
-    keywords: clinicInfo?.seo?.keywords?.join(', '),
-    ogTitle: seoTitle,
-    ogDescription: seoDescription,
-    ogType: 'website',
-    ogImage: seoImage,
-    twitterCard: 'summary_large_image',
-    twitterTitle: seoTitle,
-    twitterDescription: seoDescription,
-  })
-
-  useEffect(() => {
-    async function loadClinic() {
-      if (!slug) {
-        setError('No clinic slug provided')
-        setLoading(false)
-        return
-      }
-
-      try {
-        setLoading(true)
-        setError(null)
-        const data = await fetchClinicBySlug(slug)
-        setClinicInfo(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load clinic data')
-        console.error('Error loading clinic:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadClinic()
-  }, [slug])
 
   const visibleSections = useMemo(() => {
     if (!clinicInfo?.sections) return []
@@ -126,9 +101,13 @@ export default function ClinicPage() {
     return defaultServices
   }, [clinicInfo?.services])
 
-  const displayDoctors = useMemo(() => {
+  const displayDoctors = useMemo<DisplayDoctor[]>(() => {
     if (clinicInfo?.doctors && clinicInfo.doctors.length > 0) {
-      return clinicInfo.doctors
+      // Ensure avatar_url is always present, mapping from photo_url if needed
+      return clinicInfo.doctors.map((doctor: any) => ({
+        ...doctor,
+        avatar_url: doctor.avatar_url ?? doctor.photo_url ?? undefined,
+      }))
     }
     return defaultDoctors
   }, [clinicInfo?.doctors])
@@ -142,17 +121,17 @@ export default function ClinicPage() {
 
   const getSectionTitle = (sectionId: string): string => {
     const titles: Record<string, string> = {
-      services: 'Our Services',
-      doctors: 'Our Veterinarians',
-      openingHours: 'Opening Hours',
-      gallery: 'Photo Gallery',
-      reviews: 'Reviews'
+      services: i18n.t('clinic.services') || 'Our Services',
+      doctors: i18n.t('clinic.doctors') || 'Our Veterinarians',
+      openingHours: i18n.t('clinic.openingHours') || 'Opening Hours',
+      gallery: i18n.t('clinic.gallery') || 'Photo Gallery',
+      reviews: i18n.t('clinic.reviews') || 'Reviews'
     }
     return titles[sectionId] || 'Section'
   }
 
   const makeAppointment = () => {
-    navigate(`/${slug}/appointment`)
+    router.push(`/${lang}/${slug}/appointment`)
   }
 
   const openMaps = () => {
@@ -173,33 +152,6 @@ export default function ClinicPage() {
     }
   }
 
-  // Loading State
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-          <p className="mt-4 text-xl text-gray-600">Loading clinic information...</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Error State
-  if (error) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-6">
-          <svg className="w-20 h-20 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Clinic</h2>
-          <p className="text-lg text-gray-600">{error}</p>
-        </div>
-      </div>
-    )
-  }
-
   if (!clinicInfo) return null
 
   const themeColor = clinicInfo.color || '#2563eb'
@@ -207,19 +159,34 @@ export default function ClinicPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Head>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDescription} />
+        {clinicInfo?.seo?.keywords && (
+          <meta name="keywords" content={clinicInfo.seo.keywords.join(', ')} />
+        )}
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDescription} />
+        <meta property="og:type" content="website" />
+        {seoImage && <meta property="og:image" content={seoImage} />}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDescription} />
+      </Head>
+
       {/* Desktop Layout */}
       <div className="hidden lg:block">
         {/* Header */}
         <header className="bg-white shadow-sm">
           <div className="max-w-6xl mx-auto px-8 py-6">
             <div className="flex items-center justify-between">
-              <Link to="/" className="flex items-center gap-3">
+              <Link href={`/${lang}`} className="flex items-center gap-3">
                 <PetsIcon color={themeColor} className="h-8 w-8" />
                 <span className="text-2xl font-bold text-gray-900">VetCard</span>
               </Link>
               <div className="flex items-center gap-4">
                 <Link
-                  to="/my-appointments"
+                  href={`/${lang}/my-appointments`}
                   className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                   title="My Appointments"
                 >
@@ -233,7 +200,7 @@ export default function ClinicPage() {
                     className="hover:opacity-90 text-white font-semibold py-3 px-8 rounded-xl shadow-md transition-all"
                     style={{ backgroundColor: themeColor }}
                   >
-                    Make an Appointment
+                    <span suppressHydrationWarning>{i18n.t('clinic.bookAppointment') || 'Make an Appointment'}</span>
                   </button>
                 )}
               </div>
@@ -245,12 +212,11 @@ export default function ClinicPage() {
         <main className="max-w-6xl mx-auto px-8 py-12">
           {/* Clinic Header */}
           <div className="text-center mb-12">
-            {clinicInfo.logo_url && (
-              <div className="w-24 h-24 mx-auto mb-6 rounded-2xl overflow-hidden bg-white shadow-md">
-                <img src={clinicInfo.logo_url} alt={clinicInfo.clinic_name} className="w-full h-full object-cover" />
-              </div>
-            )}
-            <h1 className="text-4xl xl:text-5xl font-bold text-gray-900 mb-3">
+            {/* Place clinic logo inline (left of) the clinic name in the header */}
+            <h1 className="text-4xl xl:text-5xl font-bold text-gray-900 mb-3 flex items-center justify-center gap-4">
+              {clinicInfo.logo_url && (
+                <img src={clinicInfo.logo_url} alt={clinicInfo.clinic_name} className="h-16 w-16 rounded-xl object-cover bg-white shadow-md" />
+              )}
               {clinicInfo.clinic_name}
             </h1>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -301,20 +267,20 @@ export default function ClinicPage() {
             {/* Opening Hours */}
             {isSectionVisible('openingHours') && (
               <div className="bg-white rounded-2xl p-6 shadow-sm">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Opening Hours</h3>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{formatOpeningHours}</p>
+                <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-4">{i18n.t('clinic.openingHours') || 'Opening Hours'}</h3>
+                <p suppressHydrationWarning className="text-gray-700 leading-relaxed whitespace-pre-line">{formatOpeningHours}</p>
               </div>
             )}
 
             {/* Veterinarians */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Our Veterinarians</h3>
+              <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-4">{i18n.t('clinic.doctors') || 'Our Veterinarians'}</h3>
               <div className="space-y-4">
                 {displayDoctors.map((doctor) => (
                   <div key={doctor.id} className="flex items-center gap-4">
                     <div className="w-14 h-14 shrink-0 overflow-hidden rounded-full bg-gray-100">
-                      {doctor.photo_url ? (
-                        <img src={doctor.photo_url} alt={doctor.name} className="w-full h-full object-cover" />
+                      {doctor.avatar_url ? (
+                        <img src={doctor.avatar_url} alt={doctor.name} className="w-full h-full object-cover" />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-gray-400">
                           <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -334,7 +300,7 @@ export default function ClinicPage() {
 
             {/* Services */}
             <div className="bg-white rounded-2xl p-6 shadow-sm">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Our Services</h3>
+              <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-4">{i18n.t('clinic.services') || 'Our Services'}</h3>
               <ul className="space-y-2">
                 {displayServices.map((service) => (
                   <li key={service.id} className="flex items-start gap-3 text-gray-700">
@@ -349,7 +315,7 @@ export default function ClinicPage() {
           {/* Gallery Section */}
           {isSectionVisible('gallery') && clinicInfo.gallery && clinicInfo.gallery.length > 0 && (
             <div className="mt-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Photo Gallery</h3>
+              <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-4">{i18n.t('clinic.gallery') || 'Photo Gallery'}</h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {clinicInfo.gallery.slice(0, 4).map((photo, index) => (
                   <div key={photo.id || index} className="aspect-square overflow-hidden rounded-xl bg-gray-100">
@@ -364,12 +330,12 @@ export default function ClinicPage() {
           {isSectionVisible('reviews') && clinicInfo.reviews && clinicInfo.reviews.length > 0 && (
             <div className="mt-8 bg-white rounded-2xl p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
-                <h3 className="text-xl font-bold text-gray-900">Reviews</h3>
-                <div className="flex items-center gap-1">
+                <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900">{i18n.t('clinic.reviews') || 'Reviews'}</h3>
+                <div suppressHydrationWarning className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <span key={i} className="text-yellow-400 text-lg">⭐</span>
                   ))}
-                  <span className="ml-2 text-gray-600">{calculateAverageRating()} ({clinicInfo.reviews.length} reviews)</span>
+                  <span className="ml-2 text-gray-600">{calculateAverageRating()} ({clinicInfo.reviews.length} {i18n.t('clinic.reviews')?.toLowerCase() || 'reviews'})</span>
                 </div>
               </div>
             </div>
@@ -392,21 +358,28 @@ export default function ClinicPage() {
         {/* VetCard Header */}
         <div className="bg-white px-6 py-6">
           <div className="flex items-center justify-between mb-4">
-            <Link to="/" className="flex items-center gap-2">
+            <Link href={`/${lang}`} className="flex items-center gap-2">
               <PetsIcon color={themeColor} className="h-8 w-8" />
               <span className="text-base font-bold text-gray-800">VetCard</span>
             </Link>
             <Link
-              to="/my-appointments"
+              href={`/${lang}/my-appointments`}
               className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="My Appointments"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
               </svg>
             </Link>
           </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900">{clinicInfo.clinic_name}</h1>
+          <div className="text-center flex flex-col items-center">
+            {/* Place clinic logo inline with the name for mobile */}
+            <div className="flex items-center gap-3 justify-center mb-2">
+              {clinicInfo.logo_url && (
+                <img src={clinicInfo.logo_url} alt={clinicInfo.clinic_name} className="h-10 w-10 rounded-xl object-cover bg-white shadow-md" />
+              )}
+              <h1 className="text-2xl font-bold text-gray-900 m-0 p-0">{clinicInfo.clinic_name}</h1>
+            </div>
             <p className="mt-2 text-sm text-gray-600">{clinicInfo.tagline}</p>
           </div>
         </div>
@@ -419,7 +392,7 @@ export default function ClinicPage() {
               className="w-full rounded-lg py-3 text-base font-semibold text-white shadow-md"
               style={{ backgroundColor: themeColor }}
             >
-              Make an Appointment
+              <span suppressHydrationWarning>{i18n.t('clinic.bookAppointment') || 'Make an Appointment'}</span>
             </button>
           </div>
         )}
@@ -456,22 +429,22 @@ export default function ClinicPage() {
           {/* Opening Hours */}
           {isSectionVisible('openingHours') && (
             <div className="border-t border-gray-100 py-5">
-              <h3 className="mb-3 text-lg font-bold text-gray-900">Opening Hours</h3>
+              <h3 suppressHydrationWarning className="mb-3 text-lg font-bold text-gray-900">{i18n.t('clinic.openingHours') || 'Opening Hours'}</h3>
               <div className="text-sm text-gray-700">
-                <p className="whitespace-pre-line">{formatOpeningHours}</p>
+                <p suppressHydrationWarning className="whitespace-pre-line">{formatOpeningHours}</p>
               </div>
             </div>
           )}
 
           {/* Doctors */}
           <div className="border-t border-gray-100 py-5">
-            <h3 className="mb-3 text-lg font-bold text-gray-900">Our Veterinarians</h3>
+            <h3 suppressHydrationWarning className="mb-3 text-lg font-bold text-gray-900">{i18n.t('clinic.doctors') || 'Our Veterinarians'}</h3>
             <div className="space-y-3">
               {displayDoctors.map((doctor) => (
                 <div key={doctor.id} className="flex items-center gap-3">
                   <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-gray-200">
-                    {doctor.photo_url ? (
-                      <img src={doctor.photo_url} alt={doctor.name} className="h-full w-full object-cover" />
+                    {doctor.avatar_url ? (
+                      <img src={doctor.avatar_url} alt={doctor.name} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-gray-400">
                         <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -491,7 +464,7 @@ export default function ClinicPage() {
 
           {/* Services */}
           <div className="border-t border-gray-100 py-5">
-            <h3 className="mb-3 text-lg font-bold text-gray-900">Our Services</h3>
+            <h3 suppressHydrationWarning className="mb-3 text-lg font-bold text-gray-900">{i18n.t('clinic.services') || 'Our Services'}</h3>
             <div className="space-y-2">
               {displayServices.map((service) => (
                 <div key={service.id} className="flex items-start gap-2 text-sm text-gray-700">
@@ -507,7 +480,7 @@ export default function ClinicPage() {
             .filter(s => s.id !== 'openingHours' && s.id !== 'doctors' && s.id !== 'services')
             .map((section) => (
               <div key={section.id} className="border-t border-gray-100 py-5">
-                <h3 className="mb-3 text-lg font-bold text-gray-900">{getSectionTitle(section.id)}</h3>
+                <h3 suppressHydrationWarning className="mb-3 text-lg font-bold text-gray-900">{getSectionTitle(section.id)}</h3>
 
                 {section.id === 'gallery' && (
                   <div>

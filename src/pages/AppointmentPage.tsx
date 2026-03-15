@@ -1,43 +1,34 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useDocumentMeta } from '@/hooks/useDocumentMeta'
-import { fetchClinicBySlug, createAppointment, type ClinicData } from '@/services/clinicApi'
+import { useRouter } from 'next/router'
+import Link from 'next/link'
+import Head from 'next/head'
+import { createAppointment, getAvailableSlots, type ClinicData } from '@/services/clinicApi'
 import { saveAppointment } from '@/services/appointmentStorage'
 import { getUserProfile, saveUserProfile } from '@/services/userStorage'
 import PetsIcon from '@/components/PetsIcon'
-
-interface TimeSlot {
-  time: string
-  available: boolean
-}
-
-const defaultTimeSlots: TimeSlot[] = [
-  { time: '9:00 AM', available: true },
-  { time: '10:00 AM', available: true },
-  { time: '11:00 AM', available: true },
-  { time: '12:00 PM', available: true },
-  { time: '1:00 PM', available: false },
-  { time: '2:00 PM', available: true },
-  { time: '3:00 PM', available: true },
-  { time: '4:00 PM', available: true }
-]
+import { useTranslation } from 'react-i18next'
 
 const animalTypes = ['Dog', 'Cat', 'Bird', 'Rabbit', 'Hamster', 'Other']
 const petAgeOptions = ['Puppy/Kitten', 'Young', 'Adult', 'Senior', 'Unknown']
 
-export default function AppointmentPage() {
-  const { slug } = useParams<{ slug: string }>()
-  const navigate = useNavigate()
+export interface AppointmentPageProps {
+  lang: string
+  slug: string
+  clinicData: ClinicData
+}
 
-  const [clinicData, setClinicData] = useState<ClinicData | null>(null)
-  const [loading, setLoading] = useState(true)
+export default function AppointmentPage({ lang, slug, clinicData }: AppointmentPageProps) {
+  const router = useRouter()
+  const { i18n } = useTranslation()
+
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date())
   const [selectedTime, setSelectedTime] = useState<string>('')
-  const [timeSlots] = useState<TimeSlot[]>(defaultTimeSlots)
+  const [timeSlots, setTimeSlots] = useState<Array<{ time: string, available: boolean, count: number }>>([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
 
   // Form fields
   const [ownerName, setOwnerName] = useState('')
@@ -62,42 +53,69 @@ export default function AppointmentPage() {
     }
   }, [])
 
+  // Auto-select first branch if only one exists
   useEffect(() => {
-    async function loadClinic() {
-      if (!slug) return
+    if (clinicData?.branches && clinicData.branches.length === 1) {
+      setBranchId(clinicData.branches[0].id)
+    }
+  }, [clinicData])
+
+  // Set i18n language on mount for SSR/SSG hydration consistency
+  useEffect(() => {
+    if (i18n.language !== lang) {
+      i18n.changeLanguage(lang)
+    }
+  }, [lang, i18n])
+
+  // Fetch available slots when date or branch changes
+  useEffect(() => {
+    async function fetchSlots() {
+      if (!selectedDate || !branchId || !clinicData) return
+
       try {
-        setLoading(true)
-        const data = await fetchClinicBySlug(slug)
-        setClinicData(data)
-        // Auto-select first branch if only one exists
-        if (data.branches && data.branches.length === 1) {
-          setBranchId(data.branches[0].id)
-        }
-      } catch (err) {
-        console.error('Error loading clinic:', err)
+        setLoadingSlots(true)
+        setSelectedTime('') // Reset selected time when date/branch changes
+        
+        const year = selectedDate.getFullYear()
+        const month = (selectedDate.getMonth() + 1).toString().padStart(2, '0')
+        const day = selectedDate.getDate().toString().padStart(2, '0')
+        const formattedDate = `${year}-${month}-${day}`
+        
+        const slots = await getAvailableSlots(clinicData, formattedDate, branchId)
+        
+        // Deduplicate slots by time to avoid visual clutter and key warnings, and count available slots
+        const uniqueSlots = slots.reduce((acc: Array<{time: string, available: boolean, count: number}>, current) => {
+          const x = acc.find(item => item.time === current.time)
+          if (!x) {
+            return acc.concat([{ ...current, count: current.available ? 1 : 0 }])
+          } else {
+            // If we find a duplicate, prefer the one that is 'available' if the existing one isn't
+            if (current.available) {
+              x.available = true
+              x.count += 1
+            }
+            return acc
+          }
+        }, [])
+
+        setTimeSlots(uniqueSlots)
+      } catch (error) {
+        console.error('Error in AppointmentPage fetchSlots:', error)
+        // Optionally set an error state here
+        setTimeSlots([])
       } finally {
-        setLoading(false)
+        setLoadingSlots(false)
       }
     }
-    loadClinic()
-  }, [slug])
+
+    fetchSlots()
+  }, [selectedDate, branchId, clinicData])
 
   const themeColor = clinicData?.color || '#2563eb'
 
-  // Set document meta tags for SEO - appointment page should not be indexed
-  useDocumentMeta({
-    title: `Book Appointment | ${clinicData?.clinic_name || 'VetCard'}`,
-    description: `Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`,
-    ogTitle: `Book Appointment | ${clinicData?.clinic_name || 'VetCard'}`,
-    ogDescription: `Book an appointment at ${clinicData?.clinic_name || 'our veterinary clinic'}`,
-    ogType: 'website',
-    ogImage: clinicData?.seo?.og_image || clinicData?.logo_url || undefined,
-    robots: 'noindex',
-  })
-
   const monthName = useMemo(() => {
-    return currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-  }, [currentMonth])
+    return currentMonth.toLocaleDateString(lang === 'uk' ? 'uk-UA' : 'en-US', { month: 'long', year: 'numeric' })
+  }, [currentMonth, lang])
 
   const calendarDays = useMemo(() => {
     const year = currentMonth.getFullYear()
@@ -118,9 +136,18 @@ export default function AppointmentPage() {
     return days
   }, [currentMonth])
 
-  const isDateSelected = (date: Date | null) => {
-    if (!date || !selectedDate) return false
-    return date.toDateString() === selectedDate.toDateString()
+  const isDateSelected = (date: Date) => {
+    return selectedDate && date.toDateString() === selectedDate.toDateString()
+  }
+
+  const formatTime = (time: string) => {
+    if (lang !== 'uk') return time
+    const [t, meridiem] = time.split(' ')
+    let [h, m] = t.split(':')
+    let hour = parseInt(h, 10)
+    if (meridiem === 'PM' && hour < 12) hour += 12
+    if (meridiem === 'AM' && hour === 12) hour = 0
+    return `${hour.toString().padStart(2, '0')}:${m}`
   }
 
   const isToday = (date: Date | null) => {
@@ -134,11 +161,7 @@ export default function AppointmentPage() {
   }
 
   const goBack = () => {
-    if (slug) {
-      navigate(`/${slug}`)
-    } else {
-      navigate(-1)
-    }
+    router.push(`/${lang}/${slug}`)
   }
 
   const confirmAppointment = async () => {
@@ -192,6 +215,14 @@ export default function AppointmentPage() {
       setSubmitError(null)
       setSubmitSuccess(false)
 
+          // Client-side email validation
+          const emailRegex = /^\S+@\S+\.\S+$/
+          if (!emailRegex.test(email)) {
+            setSubmitError('Please enter a valid email address')
+            setSubmitting(false)
+            return
+          }
+
       // Call the API to create the appointment using clinicData for tenant domain
       await createAppointment(clinicData, appointmentData)
 
@@ -224,15 +255,13 @@ export default function AppointmentPage() {
 
       // Optionally, navigate to a success page or reset the form
       setTimeout(() => {
-        if (slug) {
-          navigate(`/${slug}`)
-        } else {
-          navigate('/')
-        }
+        router.push(`/${lang}/${slug}`)
       }, 2000)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error confirming appointment:', error)
-      setSubmitError('Failed to confirm appointment. Please try again.')
+      // Prefer error.message (which we crafted in createAppointment) if available
+      const msg = error?.message || 'Failed to confirm appointment. Please try again.'
+      setSubmitError(msg)
     } finally {
       setSubmitting(false)
     }
@@ -246,35 +275,34 @@ export default function AppointmentPage() {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-          <p className="mt-4 text-xl text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-
   return (
     <div className="min-h-screen bg-gray-50">
+      <Head>
+        <title>{i18n.t('appointmentPage.title')} | {clinicData?.clinic_name || 'VetCard'}</title>
+        <meta name="description" content={i18n.t('appointmentPage.description')} />
+        <meta property="og:title" content={`${i18n.t('appointmentPage.title')} | ${clinicData?.clinic_name || 'VetCard'}`} />
+        <meta property="og:description" content={i18n.t('appointmentPage.description')} />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content={clinicData?.seo?.og_image || clinicData?.logo_url || undefined} />
+        <meta name="robots" content="noindex" />
+      </Head>
+
       {/* Desktop Layout */}
       <div className="hidden lg:block">
         {/* Header */}
         <header className="bg-white shadow-sm">
           <div className="max-w-6xl mx-auto px-8 py-6">
             <div className="flex items-center justify-between">
-              <Link to="/" className="flex items-center gap-3">
+              <Link href={`/${lang}`} className="flex items-center gap-3">
                 <PetsIcon color={themeColor} className="h-8 w-8" />
                 <span className="text-2xl font-bold text-gray-900">VetCard</span>
               </Link>
               <div className="flex items-center gap-4">
                 <Link
-                  to="/my-appointments"
+                  suppressHydrationWarning
+                  href={`/${lang}/my-appointments`}
                   className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="My Appointments"
+                  title={i18n.t('appointmentPage.myAppointments') || 'My Appointments'}
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -287,7 +315,7 @@ export default function AppointmentPage() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
                   </svg>
-                  <span className="font-medium">Back to Clinic</span>
+                  <span suppressHydrationWarning className="font-medium">{i18n.t('appointmentPage.backToClinic') || 'Back to Clinic'}</span>
                 </button>
               </div>
             </div>
@@ -298,8 +326,8 @@ export default function AppointmentPage() {
         <main className="max-w-6xl mx-auto px-8 py-12">
           {/* Page Title */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl xl:text-5xl font-bold text-gray-900 mb-3">
-              Make an Appointment
+            <h1 suppressHydrationWarning className="text-4xl xl:text-5xl font-bold text-gray-900 mb-3">
+              {i18n.t('appointmentPage.title')}
             </h1>
             {clinicData && (
               <p className="text-xl text-gray-600">
@@ -318,7 +346,7 @@ export default function AppointmentPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
                   </svg>
                 </button>
-                <h3 className="text-2xl font-bold text-gray-900">{monthName}</h3>
+                <h3 suppressHydrationWarning className="text-2xl font-bold text-gray-900">{monthName}</h3>
                 <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                   <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
@@ -327,8 +355,8 @@ export default function AppointmentPage() {
               </div>
 
               {/* Weekday Headers */}
-              <div className="grid grid-cols-7 gap-2 mb-4">
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+              <div suppressHydrationWarning className="grid grid-cols-7 gap-2 mb-4">
+                {(lang === 'uk' ? ['Н', 'П', 'В', 'С', 'Ч', 'П', 'С'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).map((day, index) => (
                   <div key={index} className="text-center text-sm font-semibold text-gray-600">
                     {day}
                   </div>
@@ -362,29 +390,43 @@ export default function AppointmentPage() {
 
               {/* Time Slots */}
               <div className="mt-8">
-                <h4 className="text-xl font-bold text-gray-900 mb-4">Select a Time</h4>
-                <div className="grid grid-cols-4 gap-3">
-                  {timeSlots.map((slot) => (
-                    <button
-                      key={slot.time}
-                      onClick={() => setSelectedTime(slot.time)}
-                      disabled={!slot.available}
-                      className={`py-3 px-4 rounded-xl font-medium text-base transition-all ${
-                        selectedTime === slot.time && slot.available ? 'shadow-md' : ''
-                      } ${
-                        selectedTime !== slot.time && slot.available ? 'bg-gray-100 text-gray-900 hover:bg-gray-200' : ''
-                      } ${
-                        !slot.available ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''
-                      }`}
-                      style={selectedTime === slot.time && slot.available ? {
-                        backgroundColor: themeColor,
-                        color: 'white'
-                      } : {}}
-                    >
-                      {slot.time}
-                    </button>
-                  ))}
-                </div>
+                <h4 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-4">{i18n.t('appointmentPage.labels.time') || 'Select a Time'}</h4>
+                
+                {loadingSlots ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: themeColor }}></div>
+                  </div>
+                ) : timeSlots.length > 0 ? (
+                  <div className="grid grid-cols-4 gap-3">
+                    {timeSlots.map((slot) => (
+                      <button
+                        key={slot.time}
+                        onClick={() => setSelectedTime(slot.time)}
+                        disabled={!slot.available}
+                        className={`py-3 px-4 rounded-xl font-medium text-base transition-all ${
+                          selectedTime === slot.time && slot.available ? 'shadow-md' : ''
+                        } ${
+                          selectedTime !== slot.time && slot.available ? 'bg-gray-100 text-gray-900 hover:bg-gray-200' : ''
+                        } ${
+                          !slot.available ? 'bg-gray-50 text-gray-300 cursor-not-allowed' : ''
+                        }`}
+                        style={selectedTime === slot.time && slot.available ? {
+                          backgroundColor: themeColor,
+                          color: 'white'
+                        } : {}}
+                      >
+                        {formatTime(slot.time)} {slot.available && slot.count > 0 && `(${slot.count})`}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div suppressHydrationWarning className="text-center py-8 text-gray-500 bg-gray-50 rounded-xl">
+                    {selectedDate && branchId 
+                      ? (i18n.t('appointmentPage.noSlots') || 'No available slots for this date')
+                      : (i18n.t('appointmentPage.selectDateBranch') || 'Please select a date and branch')
+                    }
+                  </div>
+                )}
               </div>
             </div>
 
@@ -393,7 +435,7 @@ export default function AppointmentPage() {
               {/* Branch Selection */}
               {clinicData?.branches && clinicData.branches.length > 1 && (
                 <div className="bg-white rounded-2xl p-8 shadow-sm">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6">Select Branch</h3>
+                  <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-6">{i18n.t('appointmentPage.labels.branch') || 'Select Branch'}</h3>
                   <div className="space-y-3">
                     {clinicData.branches.map((branch) => (
                       <button
@@ -415,15 +457,16 @@ export default function AppointmentPage() {
               )}
 
               <div className="bg-white rounded-2xl p-8 shadow-sm">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Your Information</h3>
+                <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-6">{i18n.t('appointmentPage.userInfo') || 'Your Information'}</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Owner's Name</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.ownerName')}</label>
                     <input
+                      suppressHydrationWarning
                       value={ownerName}
                       onChange={(e) => setOwnerName(e.target.value)}
                       type="text"
-                      placeholder="Enter owner's name"
+                      placeholder={i18n.t('appointmentPage.placeholders.ownerName') || "Enter owner's name"}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                       style={{ borderColor: ownerName ? themeColor : '' }}
                       onFocus={(e) => e.target.style.borderColor = themeColor}
@@ -431,12 +474,13 @@ export default function AppointmentPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pet's Name</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.petName')}</label>
                     <input
+                      suppressHydrationWarning
                       value={petName}
                       onChange={(e) => setPetName(e.target.value)}
                       type="text"
-                      placeholder="Enter pet's name"
+                      placeholder={i18n.t('appointmentPage.placeholders.petName') || "Enter pet's name"}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                       style={{ borderColor: petName ? themeColor : '' }}
                       onFocus={(e) => e.target.style.borderColor = themeColor}
@@ -444,8 +488,9 @@ export default function AppointmentPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Animal Type</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.animalType')}</label>
                     <select
+                      suppressHydrationWarning
                       value={animalType}
                       onChange={(e) => setAnimalType(e.target.value)}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
@@ -453,15 +498,16 @@ export default function AppointmentPage() {
                       onFocus={(e) => e.target.style.borderColor = themeColor}
                       onBlur={(e) => { if (!animalType) e.target.style.borderColor = '' }}
                     >
-                      <option value="">Select animal type</option>
+                      <option suppressHydrationWarning value="">{i18n.t('appointmentPage.placeholders.selectAnimalType') || 'Select animal type'}</option>
                       {animalTypes.map((type) => (
                         <option key={type} value={type}>{type}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pet Age</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.petAge')}</label>
                     <select
+                      suppressHydrationWarning
                       value={petAge}
                       onChange={(e) => setPetAge(e.target.value)}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
@@ -469,19 +515,20 @@ export default function AppointmentPage() {
                       onFocus={(e) => e.target.style.borderColor = themeColor}
                       onBlur={(e) => { if (!petAge) e.target.style.borderColor = '' }}
                     >
-                      <option value="">Select pet age</option>
+                      <option suppressHydrationWarning value="">{i18n.t('appointmentPage.placeholders.selectPetAge') || 'Select pet age'}</option>
                       {petAgeOptions.map((age) => (
                         <option key={age} value={age}>{age}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.ownerPhone')}</label>
                     <input
+                      suppressHydrationWarning
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       type="tel"
-                      placeholder="Enter your phone"
+                      placeholder={i18n.t('appointmentPage.placeholders.ownerPhone') || "Enter your phone"}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                       style={{ borderColor: phone ? themeColor : '' }}
                       onFocus={(e) => e.target.style.borderColor = themeColor}
@@ -489,12 +536,13 @@ export default function AppointmentPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.ownerEmail')}</label>
                     <input
+                      suppressHydrationWarning
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       type="email"
-                      placeholder="Enter your email"
+                      placeholder={i18n.t('appointmentPage.placeholders.ownerEmail') || "Enter your email"}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                       style={{ borderColor: email ? themeColor : '' }}
                       onFocus={(e) => e.target.style.borderColor = themeColor}
@@ -502,11 +550,12 @@ export default function AppointmentPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Reason for Visit</label>
+                    <label suppressHydrationWarning className="block text-sm font-medium text-gray-700 mb-2">{i18n.t('appointmentPage.labels.serviceReason') || 'Reason for Visit'}</label>
                     <textarea
+                      suppressHydrationWarning
                       value={serviceReason}
                       onChange={(e) => setServiceReason(e.target.value)}
-                      placeholder="Enter the reason for your visit"
+                      placeholder={i18n.t('appointmentPage.placeholders.serviceReason') || "Enter the reason for your visit"}
                       className="w-full px-4 py-3 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                       style={{ borderColor: serviceReason ? themeColor : '' }}
                       onFocus={(e) => e.target.style.borderColor = themeColor}
@@ -519,13 +568,13 @@ export default function AppointmentPage() {
               {/* Summary */}
               {(selectedDate || selectedTime) && (
                 <div className="bg-white rounded-2xl p-8 shadow-sm">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Appointment Summary</h3>
+                  <h3 suppressHydrationWarning className="text-xl font-bold text-gray-900 mb-4">{i18n.t('appointmentPage.summary') || 'Appointment Summary'}</h3>
                   <div className="space-y-2 text-gray-700">
                     {selectedDate && (
-                      <p><span className="font-medium">Date:</span> {selectedDate.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                      <p suppressHydrationWarning><span className="font-medium">{i18n.t('appointmentPage.labels.date')}:</span> {selectedDate.toLocaleDateString(lang === 'uk' ? 'uk-UA' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     )}
                     {selectedTime && (
-                      <p><span className="font-medium">Time:</span> {selectedTime}</p>
+                      <p suppressHydrationWarning><span className="font-medium">{i18n.t('appointmentPage.labels.time')}:</span> {selectedTime}</p>
                     )}
                   </div>
                 </div>
@@ -538,7 +587,7 @@ export default function AppointmentPage() {
                 style={{ backgroundColor: themeColor }}
                 disabled={submitting}
               >
-                {submitting ? 'Confirming...' : 'Confirm Appointment'}
+                {submitting ? i18n.t('appointmentPage.submitting') : i18n.t('appointmentPage.submit')}
               </button>
 
               {/* Submit Error Message */}
@@ -551,7 +600,7 @@ export default function AppointmentPage() {
               {/* Submit Success Message */}
               {submitSuccess && (
                 <div className="text-green-600 text-center text-sm font-medium">
-                  Appointment confirmed successfully!
+                  {i18n.t('appointmentPage.success') || 'Appointment confirmed successfully!'}
                 </div>
               )}
             </div>
@@ -581,11 +630,12 @@ export default function AppointmentPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
                   </svg>
                 </button>
-                <h1 className="text-xl font-bold text-gray-900">Make an Appointment</h1>
+                <h1 suppressHydrationWarning className="text-xl font-bold text-gray-900">{i18n.t('appointmentPage.title')}</h1>
               </div>
               <Link
-                to="/my-appointments"
+                href={`/${lang}/my-appointments`}
                 className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                title={i18n.t('appointmentPage.myAppointments') || 'My Appointments'}
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -605,7 +655,7 @@ export default function AppointmentPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"/>
                 </svg>
               </button>
-              <h2 className="text-2xl font-bold text-center text-gray-900">{monthName}</h2>
+              <h2 suppressHydrationWarning className="text-2xl font-bold text-center text-gray-900">{monthName}</h2>
               <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                 <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"/>
@@ -616,8 +666,8 @@ export default function AppointmentPage() {
             {/* Calendar Grid */}
             <div className="bg-white rounded-xl p-4 shadow-sm">
               {/* Weekday Headers */}
-              <div className="grid grid-cols-7 gap-2 mb-4">
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+              <div suppressHydrationWarning className="grid grid-cols-7 gap-2 mb-4">
+                {(lang === 'uk' ? ['Н', 'П', 'В', 'С', 'Ч', 'П', 'С'] : ['S', 'M', 'T', 'W', 'T', 'F', 'S']).map((day, index) => (
                   <div key={index} className="text-center text-sm font-semibold text-gray-600">
                     {day}
                   </div>
@@ -653,36 +703,50 @@ export default function AppointmentPage() {
 
           {/* Time Slots */}
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Select a Time</h3>
-            <div className="grid grid-cols-2 gap-3">
-              {timeSlots.map((slot) => (
-                <button
-                  key={slot.time}
-                  onClick={() => setSelectedTime(slot.time)}
-                  disabled={!slot.available}
-                  className={`py-4 px-6 rounded-xl font-semibold text-lg transition-all ${
-                    selectedTime === slot.time && slot.available ? 'shadow-md' : ''
-                  } ${
-                    selectedTime !== slot.time && slot.available ? 'bg-white text-gray-900 border-2 border-gray-200' : ''
-                  } ${
-                    !slot.available ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
-                  }`}
-                  style={selectedTime === slot.time && slot.available ? {
-                    backgroundColor: themeColor,
-                    color: 'white',
-                    borderColor: 'transparent'
-                  } : {}}
-                >
-                  {slot.time}
-                </button>
-              ))}
-            </div>
+            <h3 suppressHydrationWarning className="text-2xl font-bold text-gray-900 mb-4">{i18n.t('appointmentPage.labels.time') || 'Select a Time'}</h3>
+            
+            {loadingSlots ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: themeColor }}></div>
+              </div>
+            ) : timeSlots.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3">
+                {timeSlots.map((slot) => (
+                  <button
+                    key={slot.time}
+                    onClick={() => setSelectedTime(slot.time)}
+                    disabled={!slot.available}
+                    className={`py-4 px-6 rounded-xl font-semibold text-lg transition-all ${
+                      selectedTime === slot.time && slot.available ? 'shadow-md' : ''
+                    } ${
+                      selectedTime !== slot.time && slot.available ? 'bg-white text-gray-900 border-2 border-gray-200' : ''
+                    } ${
+                      !slot.available ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''
+                    }`}
+                    style={selectedTime === slot.time && slot.available ? {
+                      backgroundColor: themeColor,
+                      color: 'white',
+                      borderColor: 'transparent'
+                    } : {}}
+                  >
+                    {formatTime(slot.time)} {slot.available && slot.count > 0 && `(${slot.count})`}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div suppressHydrationWarning className="text-center py-8 text-gray-500 bg-white border-2 border-gray-100 rounded-xl">
+                {selectedDate && branchId 
+                  ? (i18n.t('appointmentPage.noSlots') || 'No available slots for this date')
+                  : (i18n.t('appointmentPage.selectDateBranch') || 'Please select a date and branch')
+                }
+              </div>
+            )}
           </div>
 
           {/* Branch Selection */}
           {clinicData?.branches && clinicData.branches.length > 1 && (
             <div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">Select Branch</h3>
+              <h3 suppressHydrationWarning className="text-2xl font-bold text-gray-900 mb-4">{i18n.t('appointmentPage.labels.branch') || 'Select Branch'}</h3>
               <div className="space-y-3">
                 {clinicData.branches.map((branch) => (
                   <button
@@ -706,72 +770,79 @@ export default function AppointmentPage() {
 
           {/* User Information */}
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">Your Information</h3>
+            <h3 suppressHydrationWarning className="text-2xl font-bold text-gray-900 mb-4">{i18n.t('appointmentPage.userInfo') || 'Your Information'}</h3>
             <div className="space-y-3">
               <input
+                suppressHydrationWarning
                 value={ownerName}
                 onChange={(e) => setOwnerName(e.target.value)}
                 type="text"
-                placeholder="Owner's Name"
+                placeholder={i18n.t('appointmentPage.placeholders.ownerName') || "Owner's Name"}
                 className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                 onFocus={(e) => e.target.style.borderColor = themeColor}
                 onBlur={(e) => e.target.style.borderColor = ''}
               />
               <input
+                suppressHydrationWarning
                 value={petName}
                 onChange={(e) => setPetName(e.target.value)}
                 type="text"
-                placeholder="Pet's Name"
+                placeholder={i18n.t('appointmentPage.placeholders.petName') || "Pet's Name"}
                 className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                 onFocus={(e) => e.target.style.borderColor = themeColor}
                 onBlur={(e) => e.target.style.borderColor = ''}
               />
               <select
+                suppressHydrationWarning
                 value={animalType}
                 onChange={(e) => setAnimalType(e.target.value)}
                 className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                 onFocus={(e) => e.target.style.borderColor = themeColor}
                 onBlur={(e) => e.target.style.borderColor = ''}
               >
-                <option value="">Select animal type</option>
+                <option suppressHydrationWarning value="">{i18n.t('appointmentPage.placeholders.selectAnimalType') || 'Select animal type'}</option>
                 {animalTypes.map((type) => (
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
               <select
+                suppressHydrationWarning
                 value={petAge}
                 onChange={(e) => setPetAge(e.target.value)}
                 className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                 onFocus={(e) => e.target.style.borderColor = themeColor}
                 onBlur={(e) => e.target.style.borderColor = ''}
               >
-                <option value="">Select pet age</option>
+                <option suppressHydrationWarning value="">{i18n.t('appointmentPage.placeholders.selectPetAge') || 'Select pet age'}</option>
                 {petAgeOptions.map((age) => (
                   <option key={age} value={age}>{age}</option>
                 ))}
               </select>
               <input
+                suppressHydrationWarning
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 type="tel"
-                placeholder="Phone Number"
+                placeholder={i18n.t('appointmentPage.placeholders.ownerPhone') || "Phone Number"}
                 className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                 onFocus={(e) => e.target.style.borderColor = themeColor}
                 onBlur={(e) => e.target.style.borderColor = ''}
               />
               <input
+                suppressHydrationWarning
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 type="email"
-                placeholder="Email Address"
+                placeholder={i18n.t('appointmentPage.placeholders.ownerEmail') || "Email Address"}
                 className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                 onFocus={(e) => e.target.style.borderColor = themeColor}
                 onBlur={(e) => e.target.style.borderColor = ''}
               />
               <textarea
+                suppressHydrationWarning
                 value={serviceReason}
                 onChange={(e) => setServiceReason(e.target.value)}
-                placeholder="Reason for Visit"
+                placeholder={i18n.t('appointmentPage.placeholders.serviceReason') || "Reason for Visit"}
                 className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:outline-none transition-colors bg-white"
                 onFocus={(e) => e.target.style.borderColor = themeColor}
                 onBlur={(e) => e.target.style.borderColor = ''}
@@ -786,7 +857,7 @@ export default function AppointmentPage() {
             style={{ backgroundColor: themeColor }}
             disabled={submitting}
           >
-            {submitting ? 'Confirming...' : 'Confirm Appointment'}
+            {submitting ? i18n.t('appointmentPage.submitting') : i18n.t('appointmentPage.submit')}
           </button>
 
           {/* Submit Error Message */}
@@ -798,8 +869,8 @@ export default function AppointmentPage() {
 
           {/* Submit Success Message */}
           {submitSuccess && (
-            <div className="text-green-600 text-center text-sm font-medium">
-              Appointment confirmed successfully!
+            <div suppressHydrationWarning className="text-green-600 text-center text-sm font-medium">
+              {i18n.t('appointmentPage.success') || 'Appointment confirmed successfully!'}
             </div>
           )}
         </div>

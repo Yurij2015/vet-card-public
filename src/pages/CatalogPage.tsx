@@ -1,75 +1,30 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useDocumentMeta } from '@/hooks/useDocumentMeta'
-import { fetchClinicsList, type ClinicListItem } from '@/services/clinicApi'
+import Link from 'next/link'
+import Head from 'next/head'
+import { type ClinicListItem } from '@/services/clinicApi'
 import PetsIcon from '@/components/PetsIcon'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { useEffect } from 'react'
 
-export default function CatalogPage() {
-  const { t } = useTranslation()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [clinics, setClinics] = useState<ClinicListItem[]>([])
+interface CatalogPageProps {
+  clinics: ClinicListItem[]
+  lang: string
+}
 
-  useDocumentMeta({
-    title: t('seo.catalogTitle'),
-    description: t('seo.catalogDescription'),
-    keywords: t('seo.catalogKeywords'),
-    ogTitle: t('seo.catalogTitle'),
-    ogDescription: t('catalog.subtitle'),
-    ogType: 'website',
-  })
-
-  useEffect(() => {
-    async function loadClinics() {
-      try {
-        setLoading(true)
-        setError(null)
-
-        // Fetch all clinics with catalog details
-        const catalogData = await fetchClinicsList()
-        setClinics(catalogData)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load clinics')
-        console.error('Error loading clinics:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadClinics()
-  }, [])
-
-  // Loading State
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-          <p className="mt-4 text-xl text-gray-600">{t('catalog.loading')}</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Error State
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto px-6">
-          <svg className="w-20 h-20 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-          </svg>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('catalog.errorTitle')}</h2>
-          <p className="text-lg text-gray-600">{error}</p>
-        </div>
-      </div>
-    )
-  }
+export default function CatalogPage({ clinics, lang }: CatalogPageProps) {
+  const { i18n, t } = useTranslation()
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Head>
+        <title>{t('seo.catalogTitle')}</title>
+        <meta name="description" content={t('seo.catalogDescription')} />
+        <meta name="keywords" content={t('seo.catalogKeywords')} />
+        <meta property="og:title" content={t('seo.catalogTitle')} />
+        <meta property="og:description" content={t('catalog.subtitle')} />
+        <meta property="og:type" content="website" />
+      </Head>
+
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -79,10 +34,10 @@ export default function CatalogPage() {
               <h1 className="text-3xl font-bold text-gray-900">VetCard</h1>
             </div>
             <div className="flex items-center gap-4">
-              <Link
-                to="/my-appointments"
-                className="hidden sm:flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-              >
+               <Link
+                 href={`/${lang}/my-appointments`}
+                 className="hidden sm:flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
@@ -112,12 +67,12 @@ export default function CatalogPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {clinics.map((clinic) => (
-              <Link
-                key={clinic.slug}
-                to={`/${clinic.slug}`}
-                className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow overflow-hidden group"
-              >
+             {clinics.map((clinic) => (
+               <Link
+                 key={clinic.slug}
+                 href={`/${lang}/${clinic.slug}`}
+                 className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow overflow-hidden group"
+               >
                 {/* Card Header with Color */}
                 <div
                   className="h-3"

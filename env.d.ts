@@ -1,14 +1,13 @@
-/// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_API_BASE_URL: string
+declare namespace NodeJS {
+  interface ProcessEnv {
+    readonly NEXT_PUBLIC_API_BASE_URL?: string
+    readonly NEXT_PUBLIC_FRONTEND_KEY?: string
+    readonly NODE_ENV: 'development' | 'production' | 'test'
+  }
 }
 
-interface ImportMeta {
-  readonly env: ImportMetaEnv
-}
-
-declare module '*.svg?raw' {
+declare module '*.svg' {
   const content: string
   export default content
 }

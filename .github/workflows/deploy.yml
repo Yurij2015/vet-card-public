@@ -1,4 +1,3 @@
-# VetCard Public Frontend Deployment
 name: Deploy VetCard Frontend
 
 on:
@@ -21,44 +20,35 @@ jobs:
 
       - name: Install dependencies
         run: |
-          rm -rf node_modules package-lock.json
-          npm install
+          npm ci
 
       - name: Generate .env.production from repository variables
         env:
-          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
-          VITE_FRONTEND_KEY: ${{ vars.VITE_FRONTEND_KEY }}
+          NEXT_PUBLIC_API_BASE_URL: ${{ vars.NEXT_PUBLIC_API_BASE_URL || vars.VITE_API_BASE_URL }}
+          NEXT_PUBLIC_FRONTEND_KEY: ${{ vars.NEXT_PUBLIC_FRONTEND_KEY || vars.VITE_FRONTEND_KEY }}
         run: |
           echo "Creating .env.production from repository variables"
-          printf 'VITE_API_BASE_URL=%s\nVITE_FRONTEND_KEY=%s\n' "${VITE_API_BASE_URL}" "${VITE_FRONTEND_KEY}" > .env.production
+          printf 'NEXT_PUBLIC_API_BASE_URL=%s\n' "${NEXT_PUBLIC_API_BASE_URL}" > .env.production
+          printf 'NEXT_PUBLIC_FRONTEND_KEY=%s\n' "${NEXT_PUBLIC_FRONTEND_KEY}" >> .env.production
           echo ".env.production created"
 
       - name: Build project
-        run: npm run build --if-present
-
-      - name: Verify build output
         run: |
-          echo "--- Verifying build output ---"
-          if [ -z "$(ls -A dist)" ]; then
-            echo "Error: The 'dist' directory is empty after build. The build process likely failed to produce any files."
-            exit 1
-          else
-            echo "Build output verified. 'dist' directory contains files:"
-            ls -R dist
-          fi
+          npm run build --if-present
 
       - name: Create deployment artifact
+        env:
+          GITHUB_SHA: ${{ github.sha }}
         run: |
-          # Package ONLY the contents of the dist directory for a clean static site deployment
-          tar -czf release.tar.gz -C dist .
-          echo "--- debug: tarball content ---"
-          tar -tf release.tar.gz
+          # Package Next.js output (.next and out) for server deploy.
+          tar -czf "${GITHUB_SHA}".tar.gz --exclude=.git --exclude=node_modules .next out public package.json package-lock.json .env.production --ignore-failed-read || true
+          rm -f .env.production || true
 
       - name: Store artifact for distribution
         uses: actions/upload-artifact@v4
         with:
           name: app-build
-          path: release.tar.gz
+          path: ${{ github.sha }}.tar.gz
           retention-days: 7
 
       - name: Export deployment matrix
@@ -82,27 +72,18 @@ jobs:
         with:
           name: app-build
 
-      - name: Create artifact directory on server
-        uses: appleboy/ssh-action@v1.0.3 # Pinned to stable version
-        with:
-          host: ${{ matrix.server.ip }}
-          username: ${{ matrix.server.username }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ matrix.server.port }}
-          script: mkdir -p ${{ matrix.server.path }}/artifacts
-
       - name: Upload artifact to server
-        uses: appleboy/scp-action@v0.1.7 # Pinned to stable version
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ matrix.server.ip }}
           username: ${{ matrix.server.username }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ matrix.server.port }}
-          source: release.tar.gz
+          source: ${{ github.sha }}.tar.gz
           target: ${{ matrix.server.path }}/artifacts
 
       - name: Extract archive and create directories on server
-        uses: appleboy/ssh-action@v1.0.3 # Pinned to stable version
+        uses: appleboy/ssh-action@v1.0.3
         env:
           GITHUB_SHA: ${{ github.sha }}
         with:
@@ -114,13 +95,64 @@ jobs:
           script: |
             set -e
             RELEASE_PATH="${{ matrix.server.path }}/releases/${GITHUB_SHA}"
-            ARTIFACT_PATH="${{ matrix.server.path }}/artifacts/release.tar.gz"
+            ARTIFACT_PATH="${{ matrix.server.path }}/artifacts/${GITHUB_SHA}.tar.gz"
 
             mkdir -p "$RELEASE_PATH"
+            # Extract without preserving owners/permissions
             tar xzf "$ARTIFACT_PATH" --no-same-owner --no-same-permissions -C "$RELEASE_PATH"
 
-            echo "--- debug: releases dir listing on server ---"
-            ls -la "$RELEASE_PATH"
+            # Optional: storage directories if Next.js needs caching
+            mkdir -p "${{ matrix.server.path }}/storage/logs" || true
+
+            echo "--- debug: remote whoami & id ---"
+            whoami || true
+            id || true
+            echo "--- debug: releases dir listing ---"
+            ls -la "$RELEASE_PATH" || true
+
+            # Try to fix ownership and permissions only when sudo is available on the target.
+            if command -v sudo >/dev/null 2>&1; then
+              sudo chown -R ${{ matrix.server.username }}:www-data "$RELEASE_PATH" || true
+              sudo chmod -R ug+rwx "$RELEASE_PATH" || true
+            fi
+
+      - name: Install Node.js on server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        with:
+          host: ${{ matrix.server.ip }}
+          username: ${{ matrix.server.username }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ matrix.server.port }}
+          envs: GITHUB_SHA
+          script: |
+            set -e
+            # Install Node.js 22.x if not present
+            if ! command -v node >/dev/null 2>&1; then
+              curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+              sudo apt-get install -y nodejs
+            fi
+
+      - name: Install production dependencies on server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        with:
+          host: ${{ matrix.server.ip }}
+          username: ${{ matrix.server.username }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ matrix.server.port }}
+          envs: GITHUB_SHA
+          script: |
+            set -e
+            RELEASE_PATH="${{ matrix.server.path }}/releases/${GITHUB_SHA}"
+            cd "$RELEASE_PATH"
+            if [ -f package-lock.json ]; then
+              npm ci --omit=dev
+            else
+              npm install --omit=dev
+            fi
 
   run-before-hooks:
     name: "${{ matrix.server.name }}: Before hook"
@@ -131,14 +163,19 @@ jobs:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
     steps:
       - name: Run before hooks
-        uses: appleboy/ssh-action@v1.0.3 # Pinned to stable version
+        uses: appleboy/ssh-action@v1.0.3
         env:
           GITHUB_SHA: ${{ github.sha }}
+          RELEASE_PATH: ${{ matrix.server.path }}/releases/${{ github.sha }}
+          ACTIVE_RELEASE_PATH: ${{ matrix.server.path }}/current
+          STORAGE_PATH: ${{ matrix.server.path }}/storage
+          BASE_PATH: ${{ matrix.server.path }}
         with:
           host: ${{ matrix.server.ip }}
           username: ${{ matrix.server.username }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ matrix.server.port }}
+          envs: GITHUB_SHA,RELEASE_PATH,ACTIVE_RELEASE_PATH,STORAGE_PATH,BASE_PATH
           script: |
             if [ -n "${{ matrix.server.beforeHooks }}" ]; then
               eval "${{ matrix.server.beforeHooks }}"
@@ -158,19 +195,27 @@ jobs:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
     steps:
       - name: Activate release
-        uses: appleboy/ssh-action@v1.0.3 # Pinned to stable version
+        uses: appleboy/ssh-action@v1.0.3
         env:
           GITHUB_SHA: ${{ github.sha }}
           RELEASE_PATH: ${{ matrix.server.path }}/releases/${{ github.sha }}
           ACTIVE_RELEASE_PATH: ${{ matrix.server.path }}/current
+          STORAGE_PATH: ${{ matrix.server.path }}/storage
+          BASE_PATH: ${{ matrix.server.path }}
         with:
           host: ${{ matrix.server.ip }}
           username: ${{ matrix.server.username }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ matrix.server.port }}
-          envs: GITHUB_SHA,RELEASE_PATH,ACTIVE_RELEASE_PATH
+          envs: GITHUB_SHA,RELEASE_PATH,ACTIVE_RELEASE_PATH,STORAGE_PATH,BASE_PATH
           script: |
-            cd ${{ matrix.server.path }} && ln -sfn "releases/${GITHUB_SHA}" current
+            # Symlink the release to 'current' so the webserver serves the new build
+            ln -sfn "$RELEASE_PATH" "$ACTIVE_RELEASE_PATH"
+
+            # Optionally symlink a persistent .env if server manages it
+            if [ -f "${BASE_PATH}/.env" ]; then
+              ln -s -f "${BASE_PATH}/.env" "$RELEASE_PATH/.env" || true
+            fi
 
   run-after-hooks:
     name: "${{ matrix.server.name }}: After hook"
@@ -187,14 +232,19 @@ jobs:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
     steps:
       - name: Run after hooks
-        uses: appleboy/ssh-action@v1.0.3 # Pinned to a stable version
+        uses: appleboy/ssh-action@v1.0.3
         env:
           GITHUB_SHA: ${{ github.sha }}
+          RELEASE_PATH: ${{ matrix.server.path }}/releases/${{ github.sha }}
+          ACTIVE_RELEASE_PATH: ${{ matrix.server.path }}/current
+          STORAGE_PATH: ${{ matrix.server.path }}/storage
+          BASE_PATH: ${{ matrix.server.path }}
         with:
           host: ${{ matrix.server.ip }}
           username: ${{ matrix.server.username }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ matrix.server.port }}
+          envs: GITHUB_SHA,RELEASE_PATH,ACTIVE_RELEASE_PATH,STORAGE_PATH,BASE_PATH
           script: |
             if [ -n "${{ matrix.server.afterHooks }}" ]; then
               eval "${{ matrix.server.afterHooks }}"
@@ -216,7 +266,7 @@ jobs:
         server: ${{ fromJson(needs.create-deployment-artifacts.outputs.DEPLOYMENT_MATRIX) }}
     steps:
       - name: Clean old releases and artifacts
-        uses: appleboy/ssh-action@v1.0.3 # Pinned to stable version
+        uses: appleboy/ssh-action@v1.0.3
         env:
           RELEASES_PATH: ${{ matrix.server.path }}/releases
           ARTIFACTS_PATH: ${{ matrix.server.path }}/artifacts

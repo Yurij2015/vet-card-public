@@ -77,12 +77,12 @@ export interface ClinicData {
   sections?: Section[]
   slug: string
   phone: string
-  email?: string
+  email?: string | null
   address: string
   logo_url: string | null
   service_ids?: number[]
   doctor_ids?: number[]
-  opening_hours?: OpeningHours
+  opening_hours?: OpeningHours | null
   gallery?: Gallery[]
   reviews?: Review[]
   services?: Service[]
@@ -97,9 +97,9 @@ export interface ClinicData {
 // Mapping slug → tenant_domain (generated at build time)
 import clinicMapping from '@/data/clinicMapping.json'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://vet.digispace.pro'
-const isDev = import.meta.env.DEV
-const frontendKey = import.meta.env.VITE_FRONTEND_KEY
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://vet.digispace.pro'
+const isDev = process.env.NODE_ENV !== 'production'
+const frontendKey = process.env.NEXT_PUBLIC_FRONTEND_KEY || ''
 
 // Clinic list item with catalog data from /api/clinics/list
 export interface ClinicListItem {
@@ -122,56 +122,6 @@ function getTenantDomain(slug: string): string {
   // In production use tenant mapping
   const mapping = clinicMapping as Record<string, string>
   return mapping[slug] || API_BASE_URL
-}
-
-export async function fetchClinicBySlug(slug: string): Promise<ClinicData> {
-  const tenantDomain = getTenantDomain(slug)
-  const baseUrl = tenantDomain.startsWith('http') ? tenantDomain : `https://${tenantDomain}`
-
-  const url = `${baseUrl}/api/clinic-catalog/vet-card/${slug}`
-
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'X-Frontend-Key': frontendKey,
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch clinic data: ${response.status} ${response.statusText}`)
-    }
-
-    const responseData = await response.json()
-
-    // Extract data from a nested structure if it exists
-    return responseData.data || responseData
-  } catch (error) {
-    console.error('Error fetching clinic data:', error)
-    throw error
-  }
-}
-
-// Fetch list of all clinics for catalog
-export async function fetchClinicsList(): Promise<ClinicListItem[]> {
-  const url = `${API_BASE_URL}/api/clinics/list`
-
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'X-Frontend-Key': frontendKey,
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch clinics list: ${response.status} ${response.statusText}`)
-    }
-
-    const data = await response.json()
-    return data.data || data
-  } catch (error) {
-    console.error('Error fetching clinics list:', error)
-    throw error
-  }
 }
 
 // Appointment data for booking
@@ -204,7 +154,7 @@ function getTenantDomainFromClinic(clinicData: ClinicData): string {
   return getTenantDomain(clinicData.slug)
 }
 
-// Create appointment at clinic
+// Create appointment at a clinic
 export async function createAppointment(clinicData: ClinicData, data: AppointmentData): Promise<{ success: boolean; message?: string }> {
   const tenantDomain = getTenantDomainFromClinic(clinicData)
   const baseUrl = tenantDomain.startsWith('http') ? tenantDomain : `https://${tenantDomain}`
@@ -222,13 +172,69 @@ export async function createAppointment(clinicData: ClinicData, data: Appointmen
     })
 
     if (!response.ok) {
+      // Try to parse structured validation errors from the API and return a readable message
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `Failed to create appointment: ${response.status}`)
+
+      // Common shapes: { message: '...', errors: { field: ['msg'] } } or { errors: ['msg'] }
+      let msg = ''
+
+      if (errorData) {
+        if (typeof errorData.message === 'string' && errorData.message.length > 0) {
+          msg = errorData.message
+        } else if (errorData.errors) {
+          // errors may be object or array
+          if (Array.isArray(errorData.errors)) {
+            msg = errorData.errors.join('; ')
+          } else if (typeof errorData.errors === 'object') {
+            // join object values
+            msg = Object.entries(errorData.errors)
+              .map(([k, v]) => {
+                if (Array.isArray(v)) return `${k}: ${v.join(', ')}`
+                return `${k}: ${String(v)}`
+              })
+              .join('; ')
+          }
+        } else if (typeof errorData === 'string' && errorData.length > 0) {
+          msg = errorData
+        }
+      }
+
+      if (!msg) msg = `Failed to create appointment: ${response.status}`
+
+      const err = new Error(msg)
+      // Attach original payload for debugging
+      try { (err as any).response = { status: response.status, data: errorData } } catch {}
+      throw err
     }
 
     return { success: true }
   } catch (error) {
     console.error('Error creating appointment:', error)
+    throw error
+  }
+}
+// Get available slots for a specific date and branch
+export async function getAvailableSlots(clinicData: ClinicData, date: string, branchId: number): Promise<Array<{ time: string, available: boolean }>> {
+  const tenantDomain = getTenantDomainFromClinic(clinicData)
+  const baseUrl = tenantDomain.startsWith('http') ? tenantDomain : `https://${tenantDomain}`
+  const url = `${baseUrl}/api/appointments/public-available-slots?date=${date}&branch_id=${branchId}`
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'X-Frontend-Key': frontendKey,
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch slots: ${response.status}`)
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error('Error fetching available slots:', error)
     throw error
   }
 }
